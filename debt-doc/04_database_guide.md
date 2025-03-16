@@ -4,7 +4,7 @@
 
 ## Database Overview
 
-ChatSynth uses PostgreSQL as its primary database, with Redis for caching. This guide explains the database schema, relationships, and common operations.
+ChatSynth uses PostgreSQL as its primary database to store chat logs from multiple AI platforms (ChatGPT, Mistral, Gemini), along with user data, annotations, and version history. Redis is used for caching and real-time features.
 
 ## Schema Design
 
@@ -31,6 +31,7 @@ CREATE INDEX idx_users_email ON users(email);
 - `id`: Unique identifier
 - `email`: User's email (unique)
 - `hashed_password`: Bcrypt hashed password
+- `full_name`: User's full name
 
 #### 2. Chat Logs Table
 ```sql
@@ -41,22 +42,25 @@ CREATE TABLE chat_logs (
     source VARCHAR(100),
     content JSONB,
     metadata JSONB,
+    summary TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes
 CREATE INDEX idx_chat_logs_user_id ON chat_logs(user_id);
-CREATE INDEX idx_chat_logs_created_at ON chat_logs(created_at);
 CREATE INDEX idx_chat_logs_source ON chat_logs(source);
+CREATE INDEX idx_chat_logs_created_at ON chat_logs(created_at);
+CREATE INDEX gin_idx_chat_logs_content ON chat_logs USING gin(content);
 ```
 
-**Purpose**: Stores imported chat conversations
+**Purpose**: Stores imported chat conversations from various AI platforms
 **Location**: `backend/app/models/chat.py`
 **Key Fields**:
 - `content`: JSON structure containing the chat messages
-- `metadata`: Additional information about the chat
-- `source`: Origin of the chat (e.g., "openai", "anthropic")
+- `metadata`: Platform-specific metadata
+- `source`: Origin platform (e.g., "chatgpt", "mistral", "gemini")
+- `summary`: Auto-generated summary using NLP
 
 #### 3. Tags Table
 ```sql
@@ -67,182 +71,230 @@ CREATE TABLE tags (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE chat_log_tags (
-    chat_log_id INTEGER REFERENCES chat_logs(id),
+CREATE TABLE chat_tags (
+    chat_id INTEGER REFERENCES chat_logs(id),
     tag_id INTEGER REFERENCES tags(id),
-    PRIMARY KEY (chat_log_id, tag_id)
+    PRIMARY KEY (chat_id, tag_id)
 );
+
+-- Indexes
+CREATE INDEX idx_tags_user_id ON tags(user_id);
+CREATE INDEX idx_tags_name ON tags(name);
 ```
 
-**Purpose**: Organizes chat logs with user-defined tags
+**Purpose**: Enables chat organization through user-defined tags
 **Location**: `backend/app/models/tag.py`
 
-## SQLAlchemy Models
+#### 4. Annotations Table
+```sql
+CREATE TABLE annotations (
+    id SERIAL PRIMARY KEY,
+    chat_log_id INTEGER REFERENCES chat_logs(id),
+    content TEXT,
+    position JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-### User Model
-```python
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    
-    # Relationships
-    chat_logs = relationship("ChatLog", back_populates="user")
-    tags = relationship("Tag", back_populates="user")
+-- Indexes
+CREATE INDEX idx_annotations_chat_log_id ON annotations(chat_log_id);
 ```
 
-### ChatLog Model
-```python
-class ChatLog(Base):
-    __tablename__ = "chat_logs"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    content = Column(JSONB)
-    
-    # Relationships
-    user = relationship("User", back_populates="chat_logs")
-    tags = relationship("Tag", secondary="chat_log_tags")
+**Purpose**: Stores user annotations and highlights for chat logs
+**Location**: `backend/app/models/annotation.py`
+**Key Fields**:
+- `content`: Annotation text
+- `position`: JSON object storing start/end indices in chat
+
+#### 5. Chat Versions Table
+```sql
+CREATE TABLE chat_versions (
+    id SERIAL PRIMARY KEY,
+    chat_log_id INTEGER REFERENCES chat_logs(id),
+    content JSONB,
+    version_number INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_chat_versions_chat_log_id ON chat_versions(chat_log_id);
 ```
+
+**Purpose**: Maintains version history of chat logs
+**Location**: `backend/app/models/version.py`
 
 ## Common Database Operations
 
-### 1. User Operations
+### 1. Chat Import Operations
 ```python
-# Create user
-async def create_user(db: Session, user: UserCreate):
-    db_user = User(
-        email=user.email,
-        hashed_password=get_password_hash(user.password)
-    )
-    db.add(db_user)
-    db.commit()
-    return db_user
-
-# Get user by email
-async def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
-```
-
-### 2. Chat Log Operations
-```python
-# Add chat log
-async def create_chat_log(db: Session, chat: ChatLogCreate, user_id: int):
-    db_chat = ChatLog(
+async def import_chat(db: Session, chat_data: ChatImport, user_id: int):
+    # Create new chat log
+    chat_log = ChatLog(
         user_id=user_id,
-        content=chat.content,
-        metadata=chat.metadata
+        title=chat_data.title,
+        source=chat_data.source,
+        content=chat_data.content,
+        metadata=chat_data.metadata
     )
-    db.add(db_chat)
-    db.commit()
-    return db_chat
-
-# Get user's chat logs
-async def get_user_chat_logs(db: Session, user_id: int):
-    return db.query(ChatLog).filter(ChatLog.user_id == user_id).all()
+    db.add(chat_log)
+    await db.flush()
+    
+    # Generate and store summary
+    summary = await generate_summary(chat_data.content)
+    chat_log.summary = summary
+    
+    # Create initial version
+    version = ChatVersion(
+        chat_log_id=chat_log.id,
+        content=chat_data.content,
+        version_number=1
+    )
+    db.add(version)
+    
+    await db.commit()
+    return chat_log
 ```
 
-## Database Migration
-
-We use Alembic for database migrations:
-
-```bash
-# Create migration
-alembic revision --autogenerate -m "description"
-
-# Apply migration
-alembic upgrade head
-
-# Rollback
-alembic downgrade -1
-```
-
-## Redis Cache Structure
-
-### 1. Session Cache
+### 2. Search Operations
 ```python
-# Key format: session:{user_id}
-# Value: JSON string of session data
-await redis.set(f"session:{user_id}", session_data, expire=3600)
+async def search_chats(
+    db: Session,
+    user_id: int,
+    query: str,
+    source: Optional[str] = None,
+    tags: Optional[List[str]] = None
+):
+    query = (
+        db.query(ChatLog)
+        .filter(ChatLog.user_id == user_id)
+        .filter(
+            or_(
+                ChatLog.content.contains(query),
+                ChatLog.summary.contains(query)
+            )
+        )
+    )
+    
+    if source:
+        query = query.filter(ChatLog.source == source)
+    
+    if tags:
+        query = query.join(ChatLog.tags).filter(Tag.name.in_(tags))
+    
+    return await query.all()
 ```
 
-### 2. Chat Cache
+### 3. Annotation Operations
 ```python
-# Key format: chat:{chat_id}
-# Value: JSON string of chat data
-await redis.set(f"chat:{chat_id}", chat_data, expire=1800)
+async def add_annotation(
+    db: Session,
+    chat_id: int,
+    content: str,
+    position: Dict
+):
+    annotation = Annotation(
+        chat_log_id=chat_id,
+        content=content,
+        position=position
+    )
+    db.add(annotation)
+    await db.commit()
+    return annotation
 ```
 
 ## Performance Optimization
 
 ### 1. Indexing Strategy
-- B-tree indexes on frequently queried columns
-- Composite indexes for common query patterns
-- Regular index maintenance
+- GIN index for JSONB content search
+- B-tree indexes for foreign keys and common filters
+- Composite indexes for frequently combined queries
 
 ### 2. Query Optimization
 ```python
-# Efficient querying with joins
-def get_user_chats_with_tags(db: Session, user_id: int):
+# Efficient chat retrieval with related data
+def get_chat_with_details(db: Session, chat_id: int):
     return (
         db.query(ChatLog)
-        .options(joinedload(ChatLog.tags))
-        .filter(ChatLog.user_id == user_id)
-        .all()
+        .options(
+            joinedload(ChatLog.tags),
+            joinedload(ChatLog.annotations),
+            joinedload(ChatLog.versions)
+        )
+        .filter(ChatLog.id == chat_id)
+        .first()
     )
 ```
 
-### 3. Connection Pooling
+### 3. Caching Strategy
 ```python
-# Database connection pool configuration
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30
-)
+# Cache frequently accessed chat data
+async def get_cached_chat(redis: Redis, chat_id: int):
+    cache_key = f"chat:{chat_id}"
+    cached = await redis.get(cache_key)
+    
+    if cached:
+        return json.loads(cached)
+        
+    chat = await get_chat_with_details(db, chat_id)
+    await redis.set(
+        cache_key,
+        json.dumps(chat),
+        expire=3600
+    )
+    return chat
 ```
 
-## Backup and Recovery
+## Data Migration
 
-### 1. Backup Strategy
+We use Alembic for database migrations:
+
+```bash
+# Create initial migration
+alembic revision --autogenerate -m "Initial schema"
+
+# Apply migrations
+alembic upgrade head
+```
+
+## Backup Strategy
+
+### 1. Regular Backups
 ```bash
 # Daily backup script
-pg_dump -U postgres -d chatsynth > backup_$(date +%Y%m%d).sql
+#!/bin/bash
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+pg_dump -Fc chatsynth > backup_${TIMESTAMP}.dump
 ```
 
-### 2. Recovery Process
+### 2. Restore Process
 ```bash
 # Restore from backup
-psql -U postgres -d chatsynth < backup_file.sql
+pg_restore -d chatsynth backup_file.dump
 ```
 
-## Common Issues and Solutions
+## Security Measures
 
-### 1. Connection Issues
-```python
-# Handling connection timeouts
-from sqlalchemy import exc
-try:
-    db.query(User).all()
-except exc.OperationalError:
-    db.rollback()
-```
+### 1. Data Protection
+- Encrypted sensitive data
+- Input validation
+- Parameterized queries
+- Regular security audits
 
-### 2. Deadlocks
+### 2. Access Control
 ```python
-# Handling deadlocks
-from sqlalchemy import exc
-try:
-    with db.begin():
-        # transaction code
-except exc.DBDeadlockError:
-    # retry logic
+# Example permission check
+def check_chat_access(user_id: int, chat_id: int):
+    chat = db.query(ChatLog).filter(
+        ChatLog.id == chat_id,
+        ChatLog.user_id == user_id
+    ).first()
+    if not chat:
+        raise HTTPException(status_code=403)
+    return chat
 ```
 
 ## Next Steps
-1. Review the [API Documentation](./05_api_documentation.md)
-2. Set up your local database
-3. Try running some sample queries
+1. Implement full-text search using PostgreSQL's tsearch
+2. Add support for chat log merging
+3. Implement real-time collaboration features
+4. Add analytics capabilities
