@@ -66,6 +66,7 @@ ChatSynth is an innovative chat log aggregator that consolidates conversations f
 
 ### 8. Export and Documentation
 - Multiple export formats:
+  - shared links
   - PDF
   - Markdown
   - HTML
