@@ -1,251 +1,256 @@
 # ChatSynth Wireframes
 
-## Layout Structure
+## 1. Main Layout
 
-### Main Layout
 ```
-+------------------+------------------+
-|      Header      |     Profile     |
-+--------+---------+------------------+
-|        |                           |
-| Sidebar|         Main Content      |
-|        |                           |
-|        |                           |
-+--------+---------------------------+
-```
++------------------+--------------------------------+
+|     Header       |                                |
++--------+---------+                                |
+|        |         |                                |
+|  Side  |  Main Content Area                      |
+|  Nav   |                                         |
+|        |                                         |
+|        |                                         |
+|        |                                         |
++--------+-----------------------------------------+
 
-### Header (Top Bar)
-```
-+-------+--------+----------------+---+
-| Logo  | Search | Notifications | 👤 |
-+-------+--------+----------------+---+
-```
+Header:
+- Logo
+- Search Bar
+- User Profile
+- Import Button
+- Settings
 
-### Sidebar (Navigation)
-```
-+----------------------+
-| + New Chat           |
-+----------------------+
-| Recent Chats         |
-| ├─ Chat 1           |
-| ├─ Chat 2           |
-| └─ Chat 3           |
-+----------------------+
-| Tags                 |
-| ├─ Work             |
-| ├─ Personal         |
-| └─ Learning         |
-+----------------------+
-| Sources             |
-| ├─ ChatGPT         |
-| ├─ Mistral         |
-| └─ Gemini          |
-+----------------------+
+Side Nav:
+- Recent Chats
+- Tags
+- Sources
+- Filters
 ```
 
-### Chat View
+## 2. Import Interface
+
 ```
-+--------------------------------+
-| Chat Title                     |
-+--------------------------------+
-| Message 1 (User)               |
-| ├─ Content                     |
-| └─ Timestamp                   |
-+--------------------------------+
-| Message 2 (Assistant)          |
-| ├─ Content                     |
-| └─ Timestamp                   |
-+--------------------------------+
-| Message Input                  |
-| [Type a message...]    [Send] |
-+--------------------------------+
++------------------------------------------+
+|  Import Content                        X  |
++------------------------------------------+
+|                                          |
+|  [Paste] [File] [Cloud] [Link]          |
+|                                          |
+|  Source Selection:                       |
+|  [AI] [Social] [Podcast] [Media]        |
+|                                          |
+|  Format Options:                         |
+|  [Text] [Video] [Audio] [Transcript]    |
+|                                          |
+|  Content Area:                           |
+|  +----------------------------------+    |
+|  |                                  |    |
+|  |                                  |    |
+|  +----------------------------------+    |
+|                                          |
+|  Advanced Options:                       |
+|  - Speaker Detection                     |
+|  - Time Range                           |
+|  - Format Settings                      |
+|                                          |
+|  [Cancel]                    [Import]    |
++------------------------------------------+
 ```
 
-### Import Dialog
+## 3. Chat Interface
+
 ```
-+--------------------------------+
-| Import Chat                    |
-+--------------------------------+
-| Source:                        |
-| [ChatGPT ▼]                   |
-+--------------------------------+
-| Content:                       |
-| +----------------------------+ |
-| |                            | |
-| |     Paste chat here...     | |
-| |                            | |
-| +----------------------------+ |
-+--------------------------------+
-| [Cancel]            [Import]   |
-+--------------------------------+
++------------------------------------------+
+|  Chat Title                    Actions   |
++------------------------------------------+
+|                                          |
+|  Message History                         |
+|  +----------------------------------+    |
+|  | User: Hello                      |    |
+|  |                                  |    |
+|  | Assistant: Hi there!             |    |
+|  |                                  |    |
+|  +----------------------------------+    |
+|                                          |
+|  Input Area:                            |
+|  +----------------------------------+    |
+|  | Type your message...             |    |
+|  +----------------------------------+    |
+|  [Platform Select]         [Send]        |
++------------------------------------------+
 ```
 
-### Search Interface
+## 4. Podcast View
+
 ```
-+--------------------------------+
-| Search Results                 |
-+--------------------------------+
-| Filters:                       |
-| Date: [Start] - [End]         |
-| Source: [All Sources ▼]       |
-| Tags: [Select Tags...]        |
-+--------------------------------+
-| Results:                       |
-| ┌──────────────────────────┐  |
-| │ Chat 1                   │  |
-| │ Matched content...       │  |
-| └──────────────────────────┘  |
-| ┌──────────────────────────┐  |
-| │ Chat 2                   │  |
-| │ Matched content...       │  |
-| └──────────────────────────┘  |
-+--------------------------------+
++------------------+------------------------+
+|  Media Player    |  Chat/Transcript      |
+|  +------------+  |  +----------------+   |
+|  |            |  |  | Speaker 1:     |   |
+|  |            |  |  | Hello everyone |   |
+|  |            |  |  |                |   |
+|  +------------+  |  | Speaker 2:     |   |
+|                  |  | Hi there!      |   |
+|  Controls:       |  |                |   |
+|  [◀] [▶] [⏸]    |  +----------------+   |
+|                  |                       |
+|  Chapters:       |  Questions:          |
+|  - Intro         |  [Ask Speaker 1]     |
+|  - Topic 1       |  [Ask Speaker 2]     |
+|  - Topic 2       |  [Continue Topic]    |
++------------------+-----------------------+
 ```
 
-### Tag Management
+## 5. Hybrid Chat
+
 ```
-+--------------------------------+
-| Tags                          |
-+--------------------------------+
-| + New Tag                     |
-+--------------------------------+
-| ┌──────────────────────────┐  |
-| │ Work                     │  |
-| │ [Color] [Edit] [Delete]  │  |
-| └──────────────────────────┘  |
-| ┌──────────────────────────┐  |
-| │ Personal                 │  |
-| │ [Color] [Edit] [Delete]  │  |
-| └──────────────────────────┘  |
-+--------------------------------+
++------------------------------------------+
+|  Hybrid Chat Builder                   X  |
++------------------------------------------+
+|                                          |
+|  Source Selection:                       |
+|  +----------------------------------+    |
+|  | [✓] Chat 1                       |    |
+|  | [✓] Podcast Segment              |    |
+|  | [✓] Social Thread               |    |
+|  +----------------------------------+    |
+|                                          |
+|  Merge Strategy:                         |
+|  [Chronological] [Topic] [Custom]        |
+|                                          |
+|  Options:                                |
+|  [✓] Preserve Context                    |
+|  [✓] Link Related Content                |
+|  [✓] Allow Cross-platform Responses      |
+|                                          |
+|  Preview:                                |
+|  +----------------------------------+    |
+|  |                                  |    |
+|  |                                  |    |
+|  +----------------------------------+    |
+|                                          |
+|  [Back]                    [Create]      |
++------------------------------------------+
 ```
 
-### Settings Panel
+## 6. Platform Response
+
 ```
-+--------------------------------+
-| Settings                       |
-+--------------------------------+
-| Profile                        |
-| ├─ Name: [John Doe]           |
-| └─ Email: [john@example.com]  |
-+--------------------------------+
-| Appearance                     |
-| └─ Theme: [Light ▼]           |
-+--------------------------------+
-| Notifications                  |
-| └─ [✓] Enable notifications   |
-+--------------------------------+
-| Export                         |
-| └─ [Export All Chats]         |
-+--------------------------------+
++------------------------------------------+
+|  Response Configuration               X  |
++------------------------------------------+
+|                                          |
+|  Platform:                               |
+|  [Auto] [ChatGPT] [Claude] [Gemini]     |
+|                                          |
+|  Style:                                  |
+|  - Respond as: [Select Speaker]          |
+|  - Tone: [Casual/Formal/Expert]          |
+|  - Format: [Direct/Detailed/Socratic]    |
+|                                          |
+|  API Settings:                           |
+|  +----------------------------------+    |
+|  | API Key: [****************]       |    |
+|  +----------------------------------+    |
+|  [✓] Save API Key                        |
+|  [✓] Stream Response                     |
+|                                          |
+|  [Cancel]                    [Apply]      |
++------------------------------------------+
 ```
 
-## Mobile Layout
+## 7. Mobile Layout
 
-### Mobile Navigation
+### A. Mobile Navigation
 ```
-+--------------------------------+
-| ☰ Logo              👤        |
-+--------------------------------+
-| [Search...]                    |
-+--------------------------------+
-| Content                        |
-|                               |
-|                               |
-|                               |
-+--------------------------------+
-| [Home] [Search] [Tags] [More] |
-+--------------------------------+
-```
-
-### Mobile Chat View
-```
-+--------------------------------+
-| ← Chat Title                   |
-+--------------------------------+
-| Messages                       |
-|                               |
-|                               |
-|                               |
-|                               |
-+--------------------------------+
-| [Message...]         [Send]    |
-+--------------------------------+
++------------------------------------------+
+|  ☰  ChatSynth                  👤       |
++------------------------------------------+
+|                                          |
+|  Content Area                            |
+|                                          |
+|                                          |
+|                                          |
+|                                          |
++------------------------------------------+
+|  [🏠] [🔍] [📝] [⚙️]                    |
++------------------------------------------+
 ```
 
-## Responsive Behavior
+### B. Mobile Podcast
+```
++------------------------------------------+
+|  ← Podcast Title              Share    |
++------------------------------------------+
+|  +----------------------------------+    |
+|  |           Video Player           |    |
+|  |                                  |    |
+|  +----------------------------------+    |
+|  [Minimize]                             |
+|                                          |
+|  Chat/Transcript                         |
+|  +----------------------------------+    |
+|  |                                  |    |
+|  |                                  |    |
+|  +----------------------------------+    |
+|                                          |
+|  [Type your message...]                  |
++------------------------------------------+
+```
 
-### Desktop (>1024px)
-- Full sidebar visible
+## 8. Responsive Behavior
+
+### Desktop (1280px+)
+- Full sidebar
 - Multi-column layout
-- Expanded search filters
-- Detailed chat previews
+- Advanced features visible
 
-### Tablet (768px - 1024px)
+### Tablet (768px - 1279px)
 - Collapsible sidebar
-- Single column layout
-- Compact search filters
-- Simplified chat previews
+- Single-column layout with grid views
+- Some features in dropdown menus
 
-### Mobile (<768px)
+### Mobile (< 768px)
 - Bottom navigation
-- Full-screen modals
-- Stacked filters
-- Minimal chat previews
+- Stack layout
+- Essential features only
+- Swipe gestures
+- Floating action buttons
 
-## Interactive Elements
-
-### Buttons
-```
-[ Primary Button ]  
-[ Secondary Button ]
-[ Ghost Button ]
-```
-
-### Input Fields
-```
-┌─────────────────────┐
-│ Input Field         │
-└─────────────────────┘
-
-┌─────────────────────┐
-│ Search...     🔍    │
-└─────────────────────┘
-```
-
-### Dropdowns
-```
-┌─────────────────────┐
-│ Selected Option  ▼  │
-└─────────────────────┘
-```
-
-### Tags
-```
-┌──────┐ ┌──────┐ ┌──────┐
-│ Tag1 │ │ Tag2 │ │ Tag3 │
-└──────┘ └──────┘ └──────┘
-```
+## 9. States & Interactions
 
 ### Loading States
 ```
-[ Loading... ]
-[ • • • ]
-[ ━━━━━━━━━ ]
++------------------------------------------+
+|  Loading...                              |
+|  +----------------------------------+    |
+|  |  ⚪⚪⚪                           |    |
+|  |  Loading your content...         |    |
+|  +----------------------------------+    |
++------------------------------------------+
 ```
 
-### Tooltips
+### Error States
 ```
-┌─────────────┐
-│  Tooltip    │
-└─────────────┘
-      │
-   [Element]
++------------------------------------------+
+|  Error                               X   |
+|  +----------------------------------+    |
+|  |  ❌ Something went wrong          |    |
+|  |  Please try again                |    |
+|  +----------------------------------+    |
+|  [Retry]                    [Cancel]     |
++------------------------------------------+
 ```
 
-## Next Steps
-
-1. Create high-fidelity mockups based on these wireframes
-2. Add interactions and animations
-3. Implement responsive behavior
-4. Build component library
+### Success States
+```
++------------------------------------------+
+|  Success                             X   |
+|  +----------------------------------+    |
+|  |  ✅ Content imported              |    |
+|  |  Ready to start chatting         |    |
+|  +----------------------------------+    |
+|  [View Chat]                             |
++------------------------------------------+
+```
