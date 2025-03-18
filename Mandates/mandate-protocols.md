@@ -14,3 +14,6 @@
 ### 4 for responsse if the users like to get the answers from the platform where they that it or by their wish they would like to get response from any platform . so the LLM model option to choose that . eg: the user wish that the response to this hybrid chat should be from chatgpt , he can select that and ask for the api of that platform 
 
 ### 5 podcast import should be like the chat import . users can import the podcast from any platform(like youtube, spotify, etc.) as video or audio or transcript . the program will design it as a chat between the persons in that podcast . the user can continue the podcast or merge it with the hybrid chat or other imports . and enjoying asking the querys , continuing the chat , users can ask the querys / doubts or questions from the experts/ persons in the podcast or continue the flow/ topics they are discussing . our program will answer the querys / doubts or questions of the users they ask to the podcast/ hybrid merged chats or continue the flow/ topics they are discussing .
+
+## 6 users can have option to name or rename the imported chats or hybrid chat . 
+### the name should be stored in the database and the user / program should be able to access it 
