@@ -1,0 +1,20 @@
+{
+  "name": "chatsynth",
+  "version": "1.0.0",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^7.4.0"
+  }
+}
