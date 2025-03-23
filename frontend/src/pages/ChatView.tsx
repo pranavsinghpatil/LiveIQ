@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { TagIcon, PencilIcon } from '@heroicons/react/24/outline';
-import api from '../utils/api';
+import { api } from '../utils/api';
 
 interface ChatMessage {
   role: string;

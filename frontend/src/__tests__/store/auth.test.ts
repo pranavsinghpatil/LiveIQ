@@ -1,5 +1,5 @@
-import { useAuthStore } from '../../store/auth';
 import { act } from '@testing-library/react';
+import { useAuthStore } from '../../store/auth';
 
 // Mock localStorage
 const localStorageMock = {
@@ -7,70 +7,171 @@ const localStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
+  length: 0,
+  key: jest.fn()
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 describe('Auth Store', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset the store state
-    act(() => {
-      useAuthStore.setState({ user: null, token: null });
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isGuest: () => false,
+      getRemainingImports: () => Infinity,
+      decrementRemainingImports: () => {},
+      hasReachedImportLimit: () => false,
+      setAuth: () => {},
+      logout: () => {},
+      needsLogin: () => true,
+      decrementRemainingMessages: () => {},
+      getRemainingMessages: () => Infinity,
+      hasReachedMessageLimit: () => false
     });
   });
 
-  test('should initialize with null user and token from localStorage', () => {
-    // Setup localStorage mock to return a token
-    localStorageMock.getItem.mockReturnValueOnce('test-token');
-    
-    // Re-create the store to trigger the initialization
-    const store = useAuthStore.getState();
-    
-    // Verify localStorage was called
-    expect(localStorageMock.getItem).toHaveBeenCalledWith('token');
-    
-    // Verify initial state
-    expect(store.user).toBeNull();
-    expect(store.token).toBeNull(); // This will be null because we reset the state in beforeEach
-  });
-
-  test('setAuth should update user and token and save to localStorage', () => {
-    const testUser = { id: '1', username: 'testuser', email: 'test@example.com' };
-    const testToken = 'test-token';
-    
-    act(() => {
-      useAuthStore.getState().setAuth(testUser, testToken);
-    });
-    
-    // Verify localStorage was called
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('token', testToken);
-    
-    // Verify state was updated
+  test('should initialize with default state', () => {
     const state = useAuthStore.getState();
-    expect(state.user).toEqual(testUser);
-    expect(state.token).toEqual(testToken);
+    expect(state.user).toBeNull();
+    expect(state.token).toBeNull();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.isGuest()).toBe(false);
+    expect(state.needsLogin()).toBe(true);
   });
 
-  test('logout should clear user and token and remove from localStorage', () => {
-    // First set a user and token
-    const testUser = { id: '1', username: 'testuser', email: 'test@example.com' };
-    const testToken = 'test-token';
-    
+  test('should set auth state correctly', () => {
+    const mockUser = {
+      id: 'test-123',
+      username: 'testuser',
+      email: 'test@example.com',
+      role: 'user' as const
+    };
+    const mockToken = 'test-token';
+
     act(() => {
-      useAuthStore.getState().setAuth(testUser, testToken);
+      useAuthStore.getState().setAuth(mockUser, mockToken);
     });
-    
+
+    const state = useAuthStore.getState();
+    expect(state.user).toEqual(mockUser);
+    expect(state.token).toBe(mockToken);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.needsLogin()).toBe(false);
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('token', mockToken);
+  });
+
+  test('should handle guest user correctly', () => {
+    const mockGuestUser = {
+      id: 'guest-123',
+      username: 'guest',
+      email: 'guest@example.com',
+      role: 'guest' as const
+    };
+    const mockToken = 'guest-token';
+
+    act(() => {
+      useAuthStore.getState().setAuth(mockGuestUser, mockToken);
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.user).toEqual(mockGuestUser);
+    expect(state.token).toBe(mockToken);
+    expect(state.isAuthenticated).toBe(true);
+    expect(state.isGuest()).toBe(true);
+    expect(state.getRemainingImports()).toBe(2);
+    expect(state.getRemainingMessages()).toBe(5);
+  });
+
+  test('should handle logout correctly', () => {
+    const mockUser = {
+      id: 'test-123',
+      username: 'testuser',
+      email: 'test@example.com',
+      role: 'user' as const
+    };
+    const mockToken = 'test-token';
+
+    // First set the auth state
+    act(() => {
+      useAuthStore.getState().setAuth(mockUser, mockToken);
+    });
+
     // Then logout
     act(() => {
       useAuthStore.getState().logout();
     });
-    
-    // Verify localStorage was called
-    expect(localStorageMock.removeItem).toHaveBeenCalledWith('token');
-    
-    // Verify state was updated
+
     const state = useAuthStore.getState();
     expect(state.user).toBeNull();
     expect(state.token).toBeNull();
+    expect(state.isAuthenticated).toBe(false);
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('token');
+  });
+
+  test('should handle import limits correctly', () => {
+    const mockGuestUser = {
+      id: 'guest-123',
+      username: 'guest',
+      email: 'guest@example.com',
+      role: 'guest' as const
+    };
+    const mockToken = 'guest-token';
+
+    act(() => {
+      useAuthStore.getState().setAuth(mockGuestUser, mockToken);
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.getRemainingImports()).toBe(2);
+    
+    act(() => {
+      state.decrementRemainingImports();
+    });
+
+    expect(state.getRemainingImports()).toBe(1);
+    expect(state.hasReachedImportLimit()).toBe(false);
+
+    act(() => {
+      state.decrementRemainingImports();
+    });
+
+    expect(state.getRemainingImports()).toBe(0);
+    expect(state.hasReachedImportLimit()).toBe(true);
+  });
+
+  test('should handle message limits correctly', () => {
+    const mockGuestUser = {
+      id: 'guest-123',
+      username: 'guest',
+      email: 'guest@example.com',
+      role: 'guest' as const
+    };
+    const mockToken = 'guest-token';
+
+    act(() => {
+      useAuthStore.getState().setAuth(mockGuestUser, mockToken);
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.getRemainingMessages()).toBe(5);
+    
+    act(() => {
+      state.decrementRemainingMessages();
+    });
+
+    expect(state.getRemainingMessages()).toBe(4);
+    expect(state.hasReachedMessageLimit()).toBe(false);
+
+    // Decrement to zero
+    for (let i = 0; i < 4; i++) {
+      act(() => {
+        state.decrementRemainingMessages();
+      });
+    }
+
+    expect(state.getRemainingMessages()).toBe(0);
+    expect(state.hasReachedMessageLimit()).toBe(true);
   });
 });

@@ -21,8 +21,7 @@ engine = create_engine(
 # Session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-@contextmanager
-def get_db() -> Generator[Session, None, None]:
+def get_db():
     """Get database session with automatic cleanup."""
     db = SessionLocal()
     try:
@@ -32,5 +31,5 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     """Initialize database tables."""
-    from .models import Base
+    from models import Base
     Base.metadata.create_all(bind=engine)
