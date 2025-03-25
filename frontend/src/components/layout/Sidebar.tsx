@@ -18,10 +18,10 @@ const navigation = [
 ];
 
 const platforms = [
-  { id: 'chatgpt', name: 'ChatGPT', color: 'bg-accent-green' },
-  { id: 'mistral', name: 'Mistral', color: 'bg-accent-blue' },
-  { id: 'gemini', name: 'Gemini', color: 'bg-accent-mauve' },
-  { id: 'claude', name: 'Claude', color: 'bg-accent-peach' },
+  { id: 'chatgpt', name: 'ChatGPT', color: 'bg-success-100' },
+  { id: 'mistral', name: 'Mistral', color: 'bg-accent-100' },
+  { id: 'gemini', name: 'Gemini', color: 'bg-secondary-100' },
+  { id: 'claude', name: 'Claude', color: 'bg-primary-200' },
 ];
 
 export const Sidebar = () => {
@@ -46,15 +46,15 @@ export const Sidebar = () => {
   return (
     <div className="hidden md:flex md:flex-shrink-0">
       <div className="flex flex-col w-64">
-        <div className="flex flex-col h-0 flex-1 border-r border-gray-200 dark:border-dark-100 bg-white dark:bg-dark-100 transition-colors duration-200">
-          <div className="flex items-center justify-center h-16 flex-shrink-0 px-4 bg-primary-600 dark:bg-primary-800">
-            <span className="text-xl font-bold text-white">ChatSynth</span>
+        <div className="flex flex-col h-0 flex-1 border-r border-accent-100 dark:border-accent-300 bg-primary-100 dark:bg-secondary-100 transition-colors duration-200">
+          <div className="flex items-center justify-center h-16 flex-shrink-0 px-4 bg-accent-100 dark:bg-accent-300">
+            <span className="text-xl font-bold text-secondary-100 dark:text-primary-100">ChatSynth</span>
           </div>
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div className="px-4 mb-6">
               <button
                 onClick={createNewChat}
-                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-150"
+                className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-secondary-100 dark:text-primary-100 bg-success-100 hover:bg-success-200 dark:bg-success-200 dark:hover:bg-success-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-success-100 transition-colors duration-150"
               >
                 <PlusIcon className="h-5 w-5 mr-2" />
                 New Chat
@@ -73,8 +73,8 @@ export const Sidebar = () => {
                   className={({ isActive }) =>
                     clsx(
                       isActive
-                        ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-300/50 hover:text-gray-900 dark:hover:text-gray-200',
+                        ? 'bg-accent-50 dark:bg-accent-300/20 text-secondary-100 dark:text-primary-100'
+                        : 'text-secondary-300 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-secondary-200 hover:text-secondary-100 dark:hover:text-primary-100',
                       'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150'
                     )
                   }
@@ -82,8 +82,8 @@ export const Sidebar = () => {
                   <item.icon
                     className={clsx(
                       location.pathname === item.href
-                        ? 'text-primary-500 dark:text-primary-400'
-                        : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400',
+                        ? 'text-accent-100 dark:text-accent-100'
+                        : 'text-secondary-300 dark:text-primary-300 group-hover:text-secondary-100 dark:group-hover:text-primary-100',
                       'mr-3 flex-shrink-0 h-5 w-5 transition-colors duration-150'
                     )}
                     aria-hidden="true"
@@ -94,7 +94,7 @@ export const Sidebar = () => {
             </nav>
 
             <div className="mt-6 px-3">
-              <h3 className="px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <h3 className="px-2 text-xs font-semibold text-secondary-300 dark:text-primary-300 uppercase tracking-wider">
                 Platforms
               </h3>
               <div className="mt-2 space-y-1">
@@ -103,24 +103,22 @@ export const Sidebar = () => {
                     key={platform.id}
                     onClick={() => togglePlatform(platform.id)}
                     className={clsx(
-                      'w-full flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150',
+                      'flex items-center px-2 py-1.5 text-sm font-medium rounded-md w-full transition-colors duration-150',
                       selectedPlatforms.includes(platform.id)
-                        ? 'bg-gray-100 dark:bg-dark-300 text-gray-900 dark:text-gray-100'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-300/50 hover:text-gray-900 dark:hover:text-gray-200'
+                        ? 'bg-primary-200 dark:bg-secondary-200 text-secondary-100 dark:text-primary-100'
+                        : 'text-secondary-300 dark:text-primary-300 hover:bg-primary-200 dark:hover:bg-secondary-200 hover:text-secondary-100 dark:hover:text-primary-100'
                     )}
                   >
-                    <span className={`h-3 w-3 ${platform.color} rounded-full mr-2`} />
+                    <span
+                      className={clsx(
+                        'h-2.5 w-2.5 rounded-full mr-3',
+                        platform.color
+                      )}
+                    ></span>
                     {platform.name}
                   </button>
                 ))}
               </div>
-            </div>
-          </div>
-          
-          <div className="p-4 border-t border-gray-200 dark:border-dark-100">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              <p>ChatSynth v1.0</p>
-              <p className="mt-1"> 2025 ChatSynth</p>
             </div>
           </div>
         </div>

@@ -22,14 +22,14 @@ export const PrivateRoute = ({
   } = useAuthStore();
   const [showLimitWarning, setShowLimitWarning] = useState(false);
 
-  // If not logged in at all, redirect to login
+  // If not logged in at all, redirect to home page instead of login
   if (!token) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // Check if guest user has reached limits
   if (isGuest() && needsLogin()) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // For guest users with remaining actions, show warning if they're close to limit
@@ -64,19 +64,19 @@ export const PrivateRoute = ({
                 `You have ${getRemainingMessages()} message${getRemainingMessages() !== 1 ? 's' : ''} remaining as a guest user.`
               }
             </p>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
               Create an account to get unlimited access to all features.
             </p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowLimitWarning(false)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-dark-200 rounded-md hover:bg-gray-200 dark:hover:bg-dark-300 focus:outline-none"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Continue as Guest
               </button>
               <button
-                onClick={() => window.location.href = '/register'}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 dark:bg-primary-700 rounded-md hover:bg-primary-700 dark:hover:bg-primary-800 focus:outline-none"
+                onClick={() => window.location.href = '/'}
+                className="px-4 py-2 bg-primary-600 border border-transparent rounded-md text-white hover:bg-primary-700"
               >
                 Create Account
               </button>

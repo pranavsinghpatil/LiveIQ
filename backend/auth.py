@@ -10,13 +10,13 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from dotenv import load_dotenv
+import dotenv
 
 from database import get_db
 from models import User
 
 # Load environment variables
-load_dotenv()
+dotenv.load_dotenv()
 
 # JWT Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-keep-it-secret")
