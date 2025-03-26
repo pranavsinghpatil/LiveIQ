@@ -27,6 +27,9 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    // Set page title to reflect VoxStitch branding
+    document.title = 'VoxStitch | AI Chat Aggregator';
   }, []);
 
   // Reset scroll position when navigating

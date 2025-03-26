@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { api } from '../utils/api';
 
 export type UserRole = 'admin' | 'user' | 'guest';
 
@@ -16,8 +17,10 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
+  login: (username: string, password: string) => Promise<void>;
+  loginAsGuest: () => Promise<void>;
   logout: () => void;
+  setAuth: (user: User, token: string) => void;
   decrementRemainingImports: () => void;
   decrementRemainingMessages: () => void;
   getRemainingImports: () => number;
@@ -35,15 +38,38 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       
-      setAuth: (user, token) => {
-        // Initialize limits for guest users if not already set
-        if (user.role === 'guest') {
-          user.remainingImports = user.remainingImports ?? 2;
-          user.remainingMessages = user.remainingMessages ?? 5;
-        }
-        
+      login: async (username: string, password: string) => {
+        const response = await api.post('/auth/login', { username, password });
+        const { user, token } = response.data;
         set({
-          user,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.isGuest ? 'guest' : 'user',
+            remainingImports: user.remainingImports,
+            remainingMessages: user.remainingMessages,
+          },
+          token,
+          isAuthenticated: true,
+        });
+        
+        // Store token in localStorage for API requests
+        localStorage.setItem('token', token);
+      },
+      
+      loginAsGuest: async () => {
+        const response = await api.post('/auth/guest');
+        const { user, token } = response.data;
+        set({
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: 'guest',
+            remainingImports: 2,
+            remainingMessages: 5,
+          },
           token,
           isAuthenticated: true,
         });
@@ -61,6 +87,23 @@ export const useAuthStore = create<AuthState>()(
         
         // Remove token from localStorage
         localStorage.removeItem('token');
+      },
+      
+      setAuth: (user: User, token: string) => {
+        // Initialize limits for guest users if not already set
+        if (user.role === 'guest') {
+          user.remainingImports = user.remainingImports ?? 2;
+          user.remainingMessages = user.remainingMessages ?? 5;
+        }
+        
+        set({
+          user,
+          token,
+          isAuthenticated: true,
+        });
+        
+        // Store token in localStorage for API requests
+        localStorage.setItem('token', token);
       },
       
       decrementRemainingImports: () => {

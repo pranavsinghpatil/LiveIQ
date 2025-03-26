@@ -1,13 +1,4 @@
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  role: 'admin' | 'user' | 'guest';
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Message {
+export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -17,12 +8,42 @@ export interface Message {
 export interface ChatLog {
   id: string;
   title: string;
-  platform: 'chatgpt' | 'mistral' | 'gemini';
-  messages: Message[];
-  tags: string[];
+  platform: string;
+  messages: ChatMessage[];
   createdAt: string;
   updatedAt: string;
-  userId: string;
+  tags: string[];
+  summary?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  isGuest: boolean;
+  createdAt: string;
+  updatedAt: string;
+  preferences?: Record<string, any>;
+}
+
+export interface AuthState {
+  user: User | null;
+  token: string | null;
+  isAuthenticated: boolean;
+  isGuest: boolean;
+  isLoading: boolean;
+  error: string | null;
+  remainingImports: number;
+  remainingMessages: number;
+}
+
+export interface SearchFilters {
+  platform?: string;
+  startDate?: string;
+  endDate?: string;
+  tags?: string[];
+  query?: string;
 }
 
 export interface ApiResponse<T> {

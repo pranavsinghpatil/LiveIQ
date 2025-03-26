@@ -11,9 +11,9 @@ interface ChatListProps {
 export const ChatList = ({ chats, onChatClick }: ChatListProps) => {
   if (!chats.length) {
     return (
-      <Card className="p-8 text-center text-gray-500">
-        <p className="text-lg">No chats found</p>
-        <p className="mt-1 text-sm">Import your first chat to get started</p>
+      <Card className="p-8 text-center bg-background border border-primary/20">
+        <p className="text-lg text-text">No chats found</p>
+        <p className="mt-1 text-sm text-text/60">Import your first chat to get started</p>
       </Card>
     );
   }
@@ -44,20 +44,20 @@ export const ChatList = ({ chats, onChatClick }: ChatListProps) => {
       {chats.map((chat) => (
         <Card
           key={chat.id}
-          className="cursor-pointer hover:shadow-lg transition-shadow"
+          className="cursor-pointer hover:shadow-lg transition-shadow bg-background border border-primary/20"
           onClick={() => onChatClick(chat.id)}
         >
           <div className="p-4">
             <div className="flex justify-between items-start mb-2">
-              <h3 className="text-lg font-semibold">{chat.title}</h3>
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+              <h3 className="text-lg font-semibold text-text">{chat.title}</h3>
+              <span className="px-2 py-1 text-xs font-medium bg-primary/20 text-text rounded-full">
                 {getSourceIcon(chat.platform)}
               </span>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-text/60">
               {format(new Date(chat.createdAt), 'MMM d, yyyy')}
             </div>
-            <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+            <p className="mt-1 text-sm text-text/80 line-clamp-2">
               {getSummary(chat.messages)}
             </p>
             {chat.tags && chat.tags.length > 0 && (
@@ -65,7 +65,7 @@ export const ChatList = ({ chats, onChatClick }: ChatListProps) => {
                 {chat.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
+                    className="px-2 py-1 text-xs bg-primary/10 text-text/80 rounded-full border border-primary/20"
                   >
                     {tag}
                   </span>

@@ -3,8 +3,9 @@ Main API router for ChatSynth.
 Implements core endpoints for user management and chat operations.
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -22,10 +23,10 @@ from auth import (
 
 app = FastAPI(title="ChatSynth API")
 
-# Configure CORS
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,17 +35,50 @@ app.add_middleware(
 # Initialize database
 init_db()
 
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
+@app.options("/{full_path:path}")
+async def options_handler(request: Request):
+    return JSONResponse(
+        content="OK",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to ChatSynth API. Visit /docs for API documentation."}
 
 @app.post("/auth/login", response_model=Token)
-async def login(email: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
+async def login(username: str = None, email: str = None, password: str = None, db: Session = Depends(get_db)):
+    if not password or (not username and not email):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username/email and password are required",
+        )
+    
+    # Try to find user by username or email
+    user = None
+    if username:
+        user = db.query(User).filter(User.username == username).first()
+    if not user and email:
+        user = db.query(User).filter(User.email == email).first()
+        
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
+            detail="Invalid credentials",
         )
     
     token = create_access_token(data={"sub": user.email})

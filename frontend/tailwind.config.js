@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -8,68 +8,48 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Primary palette (from first link)
         primary: {
-          50: '#f7f5ed',
-          100: '#F6F1DE', 
-          200: '#e9e2c3',
-          300: '#d9cea3',
-          400: '#c9ba83',
-          500: '#b9a663',
-          600: '#a99243',
-          700: '#897732',
-          800: '#695d22',
-          900: '#494212',
+          100: '#DDE6ED',
+          200: '#9DB2BF',
+          300: '#526D82',
+          400: '#27374D',
         },
+        // Secondary palette (from second link)
         secondary: {
-          50: '#ededf3',
-          100: '#3E3F5B', 
-          200: '#373852',
-          300: '#303148',
-          400: '#292a3f',
-          500: '#222336',
-          600: '#1b1c2c',
-          700: '#141523',
-          800: '#0d0e19',
-          900: '#06070f',
+          100: '#9EC8B9',
+          200: '#5C8374',
+          300: '#1B4242',
+          400: '#092635',
         },
+        // Accent palette (from third link)
         accent: {
-          50: '#f0f6f4',
-          100: '#8AB2A6', 
-          200: '#7ba498',
-          300: '#6c968a',
-          400: '#5d877c',
-          500: '#4e786d',
-          600: '#3f695e',
-          700: '#305a50',
-          800: '#214b41',
-          900: '#123c33',
+          100: '#E2F4C5',
+          200: '#A8CD9F',
+          300: '#58A399',
+          400: '#496989',
         },
-        success: {
-          50: '#f3f8f3',
-          100: '#ACD3A8', 
-          200: '#9bc997',
-          300: '#8abf86',
-          400: '#79b574',
-          500: '#68ab63',
-          600: '#579c52',
-          700: '#468d41',
-          800: '#357e30',
-          900: '#246f1f',
+        // Semantic colors
+        background: {
+          DEFAULT: '#DDE6ED', // primary-100
+          dark: '#27374D',    // primary-400
         },
-        dark: {
-          100: '#1e1e2e',
-          200: '#181825',
-          300: '#11111b',
-          400: '#0d0d14',
-          500: '#09090f',
+        surface: {
+          DEFAULT: '#FFFFFF',
+          dark: '#526D82',    // primary-300
         },
-        light: {
-          100: '#F6F1DE', 
-          200: '#f1f5f9',
-          300: '#e2e8f0',
-          400: '#cbd5e1',
-          500: '#94a3b8',
+        text: {
+          DEFAULT: '#27374D', // primary-400
+          light: '#9DB2BF',   // primary-200
+          dark: '#DDE6ED',    // primary-100
         },
+        border: {
+          DEFAULT: '#9DB2BF', // primary-200
+          dark: '#526D82',    // primary-300
+        },
+        success: '#58A399',   // accent-300
+        error: '#E11D48',
+        warning: '#F59E0B',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
@@ -100,6 +80,11 @@ module.exports = {
           '100%': { transform: 'translateX(0)', opacity: '1' },
         },
       },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(to right, #27374D, #526D82)',
+        'gradient-secondary': 'linear-gradient(to right, #092635, #1B4242)',
+        'gradient-accent': 'linear-gradient(to right, #496989, #58A399)',
+      }
     },
   },
   plugins: [require('@tailwindcss/forms')],
