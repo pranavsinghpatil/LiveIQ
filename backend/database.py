@@ -1,35 +1,19 @@
 """
-Database configuration and connection management for ChatSynth.
+Database configuration and connection management for VoxStitch.
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.ext.declarative import declarative_base
-from contextlib import contextmanager
-from typing import Generator
 import os
+from dotenv import load_dotenv
+import supabase
 
-# Database URL configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///chatsynth.db")
+# Load environment variables
+load_dotenv()
 
-# Create engine
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Needed for SQLite
-)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# Session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Initialize Supabase client
+supabase_client = supabase.create_client(SUPABASE_URL, SUPABASE_KEY)
 
-def get_db():
-    """Get database session with automatic cleanup."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def init_db() -> None:
-    """Initialize database tables."""
-    from models import Base
-    Base.metadata.create_all(bind=engine)
+# Supabase Storage Bucket
+BUCKET_NAME = "voxstitch-uploads"

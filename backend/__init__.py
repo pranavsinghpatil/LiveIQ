@@ -1,5 +1,5 @@
 """
-ChatSynth Backend
+VoxStitch Backend
 A unified AI chat log aggregator backend implementation.
 """
 
