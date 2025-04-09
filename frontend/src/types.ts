@@ -15,14 +15,26 @@ export interface AuthResponse {
 
 // Message types
 export interface Message {
-  id: string;
-  chat_id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: string;
 }
 
 // Chat types
+export interface ChatBase {
+  platform: string;
+  title: string;
+  content: Message[];
+  metadata?: Record<string, any>;
+}
+
+export interface ChatCreate extends ChatBase {}
+
+export interface Chat extends ChatBase {
+  id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ChatLog {
   id: string;
   user_id: string;
@@ -37,9 +49,25 @@ export interface ImportChatRequest {
   content: string;
 }
 
+export interface ImportChatProps {
+  onImport: (chat: ChatCreate) => Promise<void>;
+  onClose: () => void;
+}
+
 // API Error types
 export interface ApiError {
   status: number;
   message: string;
   details?: any;
+}
+
+export interface AuthState {
+  isAuthenticated: boolean;
+  user: null | {
+    id: string;
+    email: string;
+    name?: string;
+  };
+  loading: boolean;
+  error: string | null;
 }

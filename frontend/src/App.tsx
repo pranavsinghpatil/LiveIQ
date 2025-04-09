@@ -1,42 +1,25 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MainLayout } from './layouts/MainLayout';
-import { PrivateRoute } from './components/auth/PrivateRoute';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { Dashboard } from './pages/Dashboard';
-import { ChatView } from './pages/ChatView';
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { Login } from "./pages/LoginPage";
+import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
 import { Home } from './pages/Home';
+import { Register } from './pages/RegisterPage';
+import { ChatView } from './pages/ChatView';
+import { MainLayout } from './layouts/MainLayout';
 
 // Create a client
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-function App() {
-  const location = useLocation();
-
-  // Initialize dark mode based on user preference
-  useEffect(() => {
-    // Check if user has a saved preference
-    const savedTheme = localStorage.getItem('theme');
-    
-    // Check for saved theme or system preference
-    if (savedTheme === 'dark' || 
-        (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-
-    // Set page title to reflect VoxStitch branding
-    document.title = 'VoxStitch | AI Chat Aggregator';
-  }, []);
-
-  // Reset scroll position when navigating
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
-
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-light-100 dark:bg-dark-200 text-gray-900 dark:text-gray-100 transition-colors duration-200">
@@ -48,27 +31,22 @@ function App() {
           
           {/* Protected routes */}
           <Route element={<MainLayout />}>
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/chats/:id"
-              element={
-                <PrivateRoute>
-                  <ChatView />
-                </PrivateRoute>
-              }
-            />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/chat/:id" element={
+              <ProtectedRoute>
+                <ChatView />
+              </ProtectedRoute>
+            } />
           </Route>
+
+          {/* 404 route */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
     </QueryClientProvider>
   );
 }
-
-export default App;
