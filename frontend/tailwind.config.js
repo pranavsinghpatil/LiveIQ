@@ -1,3 +1,5 @@
+// needed for tailwindcss
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
