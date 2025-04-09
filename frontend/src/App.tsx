@@ -25,11 +25,15 @@ export default function App() {
       <div className="min-h-screen bg-light-100 dark:bg-dark-200 text-gray-900 dark:text-gray-100 transition-colors duration-200">
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* Protected routes */}
+          {/* Protected routes that require authentication */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={
               <ProtectedRoute>
@@ -37,7 +41,7 @@ export default function App() {
               </ProtectedRoute>
             } />
             <Route path="/chat/:id" element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAuth>
                 <ChatView />
               </ProtectedRoute>
             } />

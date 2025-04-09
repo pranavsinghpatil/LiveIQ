@@ -1,59 +1,71 @@
-import axios, { InternalAxiosRequestConfig, AxiosResponse, AxiosError, AxiosHeaders } from 'axios';
-import { useAuthStore } from '../store/auth';
+// src/utils/api.ts
+import axios from "axios";
 
-// Create axios instance with base config
 export const api = axios.create({
-  baseURL: 'http://localhost:8000',  // Explicitly set the base URL
-  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT || '10000'),
-  withCredentials: false,  // Set to false since we're using * for CORS
+  baseURL: "http://localhost:8000/api",
   headers: {
-    'Content-Type': 'application/json',
-  }
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore.getState().token;
-  
-  // Ensure headers object exists and is of correct type
-  if (!config.headers) {
-    config.headers = new AxiosHeaders();
-  }
-  
-  // Add auth token if available
-  if (token) {
-    config.headers.set('Authorization', `Bearer ${token}`);
-  }
-  
-  // Log request details for debugging
-  console.log('Request URL:', config.url);
-  console.log('Request Method:', config.method);
-  console.log('Request Headers:', config.headers);
-  console.log('Request Data:', config.data);
-  return config;
-}, (error) => {
-  console.error('Request error:', error);
-  return Promise.reject(error);
-});
-
-// Handle auth errors
-api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // Log successful response for debugging
-    console.log('Response Status:', response.status);
-    console.log('Response Data:', response.data);
-    return response;
+    "Content-Type": "application/json",
   },
-  (error: AxiosError) => {
-    // Log error details for debugging
-    console.error('Response error:', error);
-    console.error('Error Response:', error.response);
-    console.error('Error Message:', error.message);
-    
+});
+
+// Add a request interceptor to add the auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("auth_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Add a response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+      // Handle unauthorized error (e.g., redirect to login)
+      localStorage.removeItem("auth_token");
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }
 );
+
+export interface ChatCreate {
+  platform: string;
+  title: string;
+  content: Array<{ role: string; content: string }>;
+  metadata?: Record<string, any>;
+}
+
+export interface Chat extends ChatCreate {
+  id: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const chatAPI = {
+  createChat: async (chat: ChatCreate) => {
+    const response = await api.post<Chat>('/chats', chat);
+    return response.data;
+  },
+  
+  getChats: async () => {
+    const response = await api.get<Chat[]>('/chats');
+    return response.data;
+  },
+  
+  getChat: async (id: string) => {
+    const response = await api.get<Chat>(`/chats/${id}`);
+    return response.data;
+  },
+  
+  updateChat: async (id: string, chat: Partial<ChatCreate>) => {
+    const response = await api.patch<Chat>(`/chats/${id}`, chat);
+    return response.data;
+  },
+  
+  deleteChat: async (id: string) => {
+    await api.delete(`/chats/${id}`);
+  }
+};
