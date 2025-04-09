@@ -82,6 +82,21 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+async def get_optional_user(request: Request, db: Session = Depends(get_db)):
+    auth = request.headers.get("Authorization")
+    if not auth:
+        return None
+    try:
+        token = auth.split(" ")[1]
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+        user = db.query(models.User).filter(models.User.username == username).first()
+        return user
+    except:
+        return None
+
 # Auth Routes
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -122,16 +137,24 @@ def register_user(user: models.UserCreate, db: Session = Depends(get_db)):
 
 # Chat Routes
 @app.post("/api/chats", response_model=models.Chat)
-def create_chat(chat: models.ChatCreate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_chat = models.Chat(**chat.dict(), user_id=current_user.id)
+async def create_chat(chat: models.ChatCreate, current_user: Optional[models.User] = Depends(get_optional_user), db: Session = Depends(get_db)):
+    if not current_user:
+        # Check guest limits
+        guest_chats = db.query(models.Chat).filter(models.Chat.user_id == None).count()
+        if guest_chats >= 2:
+            raise HTTPException(status_code=403, detail="Guest chat import limit reached")
+    
+    db_chat = models.Chat(**chat.dict(), user_id=current_user.id if current_user else None)
     db.add(db_chat)
     db.commit()
     db.refresh(db_chat)
     return db_chat
 
 @app.get("/api/chats", response_model=List[models.Chat])
-def get_chats(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return db.query(models.Chat).filter(models.Chat.user_id == current_user.id).all()
+async def get_chats(current_user: Optional[models.User] = Depends(get_optional_user), db: Session = Depends(get_db)):
+    if current_user:
+        return db.query(models.Chat).filter(models.Chat.user_id == current_user.id).all()
+    return []
 
 @app.get("/api/chats/{chat_id}", response_model=models.Chat)
 def get_chat(chat_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
