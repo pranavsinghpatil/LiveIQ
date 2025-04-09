@@ -1,56 +1,34 @@
-import React from 'react';
+import { ButtonHTMLAttributes } from "react";
+import { cn } from "../../utils/cn";
 
-type ButtonProps = {
-  children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-  fullWidth?: boolean;
-  disabled?: boolean;
-  icon?: React.ReactNode;
-  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  type?: 'button' | 'submit' | 'reset';
-  className?: string;
-};
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary" | "outline";
+  size?: "sm" | "md" | "lg";
+}
 
-export const Button: React.FC<ButtonProps> = ({
-  children,
-  variant = 'primary',
-  size = 'md',
-  fullWidth = false,
-  disabled = false,
-  icon,
-  onClick,
-  type = 'button',
-  className = '',
-}) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md focus:outline-none transition-colors duration-200 ease-in-out';
-  
-  const variantClasses = {
-    primary: 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm',
-    secondary: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-    outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-    ghost: 'text-gray-700 hover:bg-gray-100',
-    danger: 'bg-red-600 text-white hover:bg-red-700',
-  };
-
-  const sizeClasses = {
-    sm: 'text-xs px-3 py-1.5',
-    md: 'text-sm px-4 py-2',
-    lg: 'text-base px-5 py-2.5',
-  };
-
-  const widthClass = fullWidth ? 'w-full' : '';
-  const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : '';
-
+export const Button = ({
+  className,
+  variant = "primary",
+  size = "md",
+  ...props
+}: ButtonProps) => {
   return (
     <button
-      type={type}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabledClass} ${className}`}
-      onClick={onClick}
-      disabled={disabled}
-    >
-      {icon && <span className="mr-2">{icon}</span>}
-      {children}
-    </button>
+      className={cn(
+        "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        {
+          "bg-primary hover:bg-primary-dark text-white": variant === "primary",
+          "bg-gray-100 hover:bg-gray-200 text-gray-900": variant === "secondary",
+          "border border-gray-300 bg-transparent hover:bg-gray-100": variant === "outline",
+        },
+        {
+          "h-8 px-3 text-sm": size === "sm",
+          "h-10 px-4 text-base": size === "md",
+          "h-12 px-6 text-lg": size === "lg",
+        },
+        className
+      )}
+      {...props}
+    />
   );
 };

@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/auth';
-import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
 
 export const Login = () => {
   const navigate = useNavigate();

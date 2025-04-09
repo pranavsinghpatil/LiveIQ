@@ -1,99 +1,16 @@
-import React from 'react';
-import clsx from 'clsx';
+import { HTMLAttributes } from "react";
+import { cn } from "../../utils/cn";
 
-type CardProps = {
-  children: React.ReactNode;
-  className?: string;
-  hover?: boolean;
-  bordered?: boolean;
-  padding?: 'sm' | 'md' | 'lg';
-  onClick?: () => void;
-};
+interface CardProps extends HTMLAttributes<HTMLDivElement> {}
 
-export const Card: React.FC<CardProps> = ({
-  children,
-  className = '',
-  hover = false,
-  bordered = false,
-  padding = 'md',
-  onClick
-}) => {
-  const paddingClass = {
-    sm: 'p-2',
-    md: 'p-4',
-    lg: 'p-6'
-  }[padding];
-
+export const Card = ({ className, ...props }: CardProps) => {
   return (
     <div
-      className={clsx(
-        'bg-green-100 rounded-xl shadow-sm overflow-hidden',
-        paddingClass,
-        {
-          'hover:shadow-md transition-all duration-200': hover,
-          'border border-gray-200': bordered
-        },
+      className={cn(
+        "rounded-lg bg-white shadow-md dark:bg-gray-800",
         className
       )}
-      onClick={onClick}
-      role={onClick ? 'button' : undefined}
-    >
-      {children}
-    </div>
-  );
-};
-
-export const CardHeader: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = '' 
-}) => {
-  return (
-    <div className={`mb-4 ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-export const CardTitle: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = '' 
-}) => {
-  return (
-    <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
-      {children}
-    </h3>
-  );
-};
-
-export const CardDescription: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = '' 
-}) => {
-  return (
-    <p className={`text-sm text-gray-500 ${className}`}>
-      {children}
-    </p>
-  );
-};
-
-export const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = '' 
-}) => {
-  return (
-    <div className={className}>
-      {children}
-    </div>
-  );
-};
-
-export const CardFooter: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = '' 
-}) => {
-  return (
-    <div className={`mt-4 flex items-center ${className}`}>
-      {children}
-    </div>
+      {...props}
+    />
   );
 };
