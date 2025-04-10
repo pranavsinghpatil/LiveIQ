@@ -1,77 +1,51 @@
 """
 Database models for VoxStitch.
 """
-
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, text
-from sqlalchemy.orm import relationship
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional
 from datetime import datetime
-from database import Base
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 
-# SQLAlchemy Models
-class User(Base):
-    __tablename__ = "users"
+# --------------------
+# User Models
+# --------------------
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_active = Column(Integer, default=1)
-    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
-    updated_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'), onupdate=text('CURRENT_TIMESTAMP'))
-
-    chats = relationship("Chat", back_populates="user")
-
-class Chat(Base):
-    __tablename__ = "chats"
-
-    id = Column(Integer, primary_key=True, index=True)
-    platform = Column(String, index=True)
-    title = Column(String)
-    content = Column(JSON)
-    chat_metadata = Column(JSON, nullable=True)  # Renamed from metadata to chat_metadata
-    user_id = Column(Integer, ForeignKey("users.id"))
-    created_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'))
-    updated_at = Column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'), onupdate=text('CURRENT_TIMESTAMP'))
-
-    user = relationship("User", back_populates="chats")
-
-# Pydantic Models
-class MessageContent(BaseModel):
-    role: str
-    content: str
-
-class UserBase(BaseModel):
-    email: str
+class User(BaseModel):
+    id: str
+    email: EmailStr
     username: str
 
-class UserCreate(UserBase):
-    password: str
+    class Config:
+        from_attributes = True
 
-class User(UserBase):
-    id: int
-    is_active: bool
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+class UserCreate(BaseModel):
+    email: EmailStr
+    username: str
+    password: str  # Supabase will hash this internally
+
+class UserOut(BaseModel):
+    id: str
+    email: EmailStr
+    username: str
 
     class Config:
         from_attributes = True
 
-class ChatBase(BaseModel):
-    platform: str
+# --------------------
+# Chat Models
+# --------------------
+
+class Chat(BaseModel):
+    id: str
+    user_id: Optional[str]
     title: str
-    content: List[MessageContent]
-    chat_metadata: Optional[Dict[str, Any]] = None
-
-class ChatCreate(ChatBase):
-    pass
-
-class Chat(ChatBase):
-    id: int
-    user_id: Optional[int] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    content: str
+    media_type: Optional[str] = "text"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
         from_attributes = True
+
+class ChatCreate(BaseModel):
+    title: str
+    content: str
+    media_type: Optional[str] = "text"

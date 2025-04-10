@@ -52,8 +52,8 @@ export function Home() {
           <div className="mb-12">
             <Card className="p-6 max-w-2xl mx-auto">
               <h2 className="text-xl font-semibold mb-4">You're in Guest Mode</h2>
-              <p className="text-text/60 mb-6">
-                Create an account to unlock unlimited chat imports, messages, and more features:
+              <div className="text-text/60 mb-6">
+                <p className="mb-2">Create an account to unlock unlimited chat imports, messages, and more features:</p>
                 <ul className="list-disc list-inside mt-2">
                   <li>Unlimited chat imports</li>
                   <li>Unlimited messages</li>
@@ -61,7 +61,7 @@ export function Home() {
                   <li>Custom tags and organization</li>
                   <li>Export and backup features</li>
                 </ul>
-              </p>
+              </div>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Button onClick={() => navigate('/register')} className="w-full sm:w-auto">
                   Create Account

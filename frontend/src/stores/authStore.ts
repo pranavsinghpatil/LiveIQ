@@ -1,32 +1,33 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+interface GuestUsage {
+  chatImports: number;
+  messages: number;
+}
+
 interface AuthState {
   token: string | null;
   isGuest: boolean;
-  guestUsage: {
-    chatImports: number;
-    messages: number;
-  };
+  guestUsage: GuestUsage;
   setToken: (token: string | null) => void;
   setIsGuest: (isGuest: boolean) => void;
   incrementChatImports: () => void;
   incrementMessages: () => void;
+  startGuestMode: () => void;
   logout: () => void;
-  canImportChat: () => boolean;
-  canSendMessage: () => boolean;
 }
 
 const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       token: null,
       isGuest: false,
       guestUsage: {
         chatImports: 0,
         messages: 0,
       },
-      setToken: (token) => set({ token }),
+      setToken: (token) => set({ token, isGuest: false }),
       setIsGuest: (isGuest) => set({ isGuest }),
       incrementChatImports: () =>
         set((state) => ({
@@ -42,6 +43,15 @@ const useAuthStore = create<AuthState>()(
             messages: state.guestUsage.messages + 1,
           },
         })),
+      startGuestMode: () =>
+        set({
+          token: null,
+          isGuest: true,
+          guestUsage: {
+            chatImports: 0,
+            messages: 0,
+          },
+        }),
       logout: () =>
         set({
           token: null,
@@ -51,14 +61,6 @@ const useAuthStore = create<AuthState>()(
             messages: 0,
           },
         }),
-      canImportChat: () => {
-        const { isGuest, guestUsage } = get();
-        return !isGuest || guestUsage.chatImports < 2;
-      },
-      canSendMessage: () => {
-        const { isGuest, guestUsage } = get();
-        return !isGuest || guestUsage.messages < 5;
-      },
     }),
     {
       name: 'auth-storage',

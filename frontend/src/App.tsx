@@ -1,56 +1,37 @@
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import ProtectedRoute from "./routes/ProtectedRoute";
-import { Login } from "./pages/LoginPage";
-import Dashboard from "./pages/Dashboard";
-import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from './routes/ProtectedRoute';
 import { Home } from './pages/Home';
-import { Register } from './pages/RegisterPage';
-import { ChatView } from './pages/ChatView';
-import { MainLayout } from './layouts/MainLayout';
+import { Login } from './components/auth/Login';
+import { Register } from './components/auth/Register';
+import { Dashboard } from './pages/Dashboard';
+import { NotFound } from './pages/NotFound';
+import { MainLayout } from './components/layout/MainLayout';
 
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-export default function App() {
+export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-light-100 dark:bg-dark-200 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+      <Router>
         <Routes>
-          {/* Public routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          } />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* Protected routes that require authentication */}
-          <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/chat/:id" element={
-              <ProtectedRoute requireAuth>
-                <ChatView />
-              </ProtectedRoute>
-            } />
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Home />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+            <Route
+              path="dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="404" element={<NotFound />} />
+            <Route path="*" element={<Navigate to="/404" replace />} />
           </Route>
-
-          {/* 404 route */}
-          <Route path="*" element={<NotFound />} />
         </Routes>
-      </div>
+      </Router>
     </QueryClientProvider>
   );
 }
