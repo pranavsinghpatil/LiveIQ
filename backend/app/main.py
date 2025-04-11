@@ -143,4 +143,6 @@ def login_user(user: UserCreate):
         raise HTTPException(status_code=401, detail=str(e))
 
 # Include chat routes
-app.include_router(chats.router, prefix="/api/chats", tags=["chats"])
+app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
+app.include_router(chat_routes.router, prefix="/chats", tags=["Chats"])
+app.include_router(process_routes.router, prefix="/process", tags=["Processing"])
