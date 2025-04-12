@@ -2,12 +2,14 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
 from typing import List, Optional
-from models import Chat, ChatCreate, User, UserCreate
+from .models.chat_models import Chat, ChatCreate
+from .models.user_models import User, UserCreate
 from datetime import datetime
 import os
 import jwt
 from dotenv import load_dotenv
-from routes import chats
+from .routes import chats
+from .routes.auth_routes import auth_router  
 
 load_dotenv()
 
@@ -106,43 +108,24 @@ def delete_chat(chat_id: str, request: Request):
     return {"message": "Chat deleted"}
 
 # Supabase auth 
-@app.post("/api/auth/register")
-def register_user(user: UserCreate):
-    try:
-        res = supabase.auth.sign_up({
-            "email": user.email,
-            "password": user.password,
-            "options": {
-                "data": {"username": user.username}
-            }
-        })
-        if hasattr(res, 'error') and res.error:
-            raise HTTPException(status_code=400, detail=str(res.error))
-        return {"message": "Registered successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+# @app.post("/api/auth/register")
+# def register_user(user: UserCreate):
+#     try:
+#         res = supabase.auth.sign_up({
+#             "email": user.email,
+#             "password": user.password,
+#             "options": {
+#                 "data": {"username": user.username}
+#             }
+#         })
+#         if hasattr(res, 'error') and res.error:
+#             raise HTTPException(status_code=400, detail=str(res.error))
+#         return {"message": "Registered successfully"}
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/api/auth/login")
-def login_user(user: UserCreate):
-    try:
-        res = supabase.auth.sign_in_with_password({
-            "email": user.email,
-            "password": user.password
-        })
-        if hasattr(res, 'error') and res.error:
-            raise HTTPException(status_code=401, detail=str(res.error))
-        return {
-            "access_token": res.session.access_token,
-            "user": {
-                "id": res.user.id,
-                "email": res.user.email,
-                "username": res.user.user_metadata.get("username", "unknown")
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=str(e))
+
 
 # Include chat routes
-app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
-app.include_router(chat_routes.router, prefix="/chats", tags=["Chats"])
-app.include_router(process_routes.router, prefix="/process", tags=["Processing"])
+app.include_router(chats.router, prefix="/api/chats", tags=["chats"])
+app.include_router(auth_router, prefix="/auth")

@@ -10,7 +10,7 @@ import os
 import tempfile
 from typing import Optional
 
-from utils.media_processor import media_processor
+from ..utils.media_processor import media_processor
 
 # Create router with tags for better API documentation
 router = APIRouter(tags=["chats"])
