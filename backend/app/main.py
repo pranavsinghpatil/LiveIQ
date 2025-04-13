@@ -1,37 +1,28 @@
+"""
+Main FastAPI application module for VoxStitch.
+"""
+
 from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client, Client
 from typing import List, Optional
-from .models.chat_models import Chat, ChatCreate
 from .models.user_models import User, UserCreate
-from datetime import datetime
-import os
+from .models.chat import Chat, ChatCreate
+from .services.supabase_client import supabase, SUPABASE_JWT_SECRET
+from .routes.auth_routes import routes as auth_router
+from .routes.chat_routes import routes as chat_router
 import jwt
-from dotenv import load_dotenv
-from .routes.auth_routes import auth_router  
-from routes.chat_routes import router as chat_router
-
-load_dotenv()
-
-# Supabase Config
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Using the anon key for client operations
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("Missing required Supabase environment variables")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+from datetime import datetime
 
 app = FastAPI(
-    title="VoxStitch Backend",
-    description="Backend API for VoxStitch chat aggregator",
+    title="VoxStitch API",
+    description="Backend API for VoxStitch - AI Chat Log Aggregator",
     version="1.0.0"
 )
 
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update with your frontend URL in production
+    allow_origins=["*"],  # In production, replace with specific origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,6 +30,7 @@ app.add_middleware(
 
 # --- AUTH HELPERS ---
 def get_current_user(request: Request) -> Optional[User]:
+    """Get current user from JWT token in request header"""
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
@@ -53,24 +45,30 @@ def get_current_user(request: Request) -> Optional[User]:
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to VoxStitch Backend!"}
+    return {
+        "message": "Welcome to VoxStitch API",
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
 
 @app.get("/api/chats", response_model=List[Chat])
 def get_chats(request: Request):
+    """Get all chats for the current user"""
     user = get_current_user(request)
     if not user:
         return []
 
-    res = supabase.from_("chats").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
+    res = supabase.table("chats").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
     if res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return res.data
 
 @app.get("/api/chats/{chat_id}", response_model=Chat)
 def get_chat(chat_id: str, request: Request):
+    """Get a specific chat by ID"""
     user = get_current_user(request)
 
-    query = supabase.from_("chats").select("*").eq("id", chat_id)
+    query = supabase.table("chats").select("*").eq("id", chat_id)
     if user:
         query = query.eq("user_id", user.id)
     else:
@@ -83,26 +81,28 @@ def get_chat(chat_id: str, request: Request):
 
 @app.patch("/api/chats/{chat_id}", response_model=Chat)
 def update_chat(chat_id: str, chat_update: ChatCreate, request: Request):
+    """Update a chat by ID"""
     user = get_current_user(request)
-    chat = supabase.from_("chats").select("id", "user_id").eq("id", chat_id).single().execute()
+    chat = supabase.table("chats").select("id", "user_id").eq("id", chat_id).single().execute()
 
     if chat.error or (user and chat.data["user_id"] != user.id):
         raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
 
-    res = supabase.from_("chats").update(chat_update.dict(exclude_unset=True)).eq("id", chat_id).execute()
+    res = supabase.table("chats").update(chat_update.dict(exclude_unset=True)).eq("id", chat_id).execute()
     if res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return res.data[0]
 
 @app.delete("/api/chats/{chat_id}")
 def delete_chat(chat_id: str, request: Request):
+    """Delete a chat by ID"""
     user = get_current_user(request)
-    chat = supabase.from_("chats").select("id", "user_id").eq("id", chat_id).single().execute()
+    chat = supabase.table("chats").select("id", "user_id").eq("id", chat_id).single().execute()
 
     if chat.error or (user and chat.data["user_id"] != user.id):
         raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
 
-    res = supabase.from_("chats").delete().eq("id", chat_id).execute()
+    res = supabase.table("chats").delete().eq("id", chat_id).execute()
     if res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return {"message": "Chat deleted"}
@@ -110,6 +110,7 @@ def delete_chat(chat_id: str, request: Request):
 # Supabase auth 
 @app.post("/api/auth/register")
 def register_user(user: UserCreate):
+    """Register a new user"""
     try:
         res = supabase.auth.sign_up({
             "email": user.email,
@@ -126,6 +127,7 @@ def register_user(user: UserCreate):
 
 @app.post("/api/auth/login")
 def login_user(user: UserCreate):
+    """Login with email and password"""
     try:
         res = supabase.auth.sign_in_with_password({
             "email": user.email,
@@ -144,7 +146,6 @@ def login_user(user: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
 
-# Include chat routes
-# app.include_router(chats.router, prefix="/api/chats", tags=["chats"])
-# app.include_router(auth_router, prefix="/auth")
-app.include_router(chat_router, prefix="/api", tags=["Chat"])
+# Include routers for additional functionality
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(chat_router, prefix="/api/chats", tags=["chats"])

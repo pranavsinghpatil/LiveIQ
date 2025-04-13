@@ -11,24 +11,53 @@ import fitz  # PyMuPDF for PDF processing
 import requests
 from bs4 import BeautifulSoup
 import yt_dlp  # Modern replacement for youtube-dl
+from fastapi import UploadFile
+import aiofiles
+import tempfile
 
 class MediaProcessor:
     def __init__(self):
         self.supported_image_types = {'.png', '.jpg', '.jpeg', '.webp'}
         self.supported_video_types = {'.mp4', '.webm', '.mkv'}
         
-    async def process_file(self, file_path: str, file_type: str) -> Dict[str, Any]:
-        """Process uploaded files based on their type."""
-        ext = os.path.splitext(file_path)[1].lower()
-        
+    def get_media_type(self, filename: str) -> str:
+        """Determine media type from filename extension."""
+        ext = os.path.splitext(filename)[1].lower()
         if ext == '.pdf':
-            return await self._process_pdf(file_path)
+            return 'pdf'
         elif ext in self.supported_image_types:
-            return await self._process_image(file_path)
+            return 'image'
         elif ext in self.supported_video_types:
-            return await self._process_video(file_path)
+            return 'video'
         else:
-            raise ValueError(f"Unsupported file type: {ext}")
+            return 'text'
+
+    async def process_file(self, file: UploadFile) -> str:
+        """Process uploaded files based on their type."""
+        # Create a temporary file to store the upload
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            try:
+                # Write uploaded file to temporary file
+                content = await file.read()
+                temp_file.write(content)
+                temp_file.flush()
+
+                # Process based on file type
+                ext = os.path.splitext(file.filename)[1].lower()
+                if ext == '.pdf':
+                    result = await self._process_pdf(temp_file.name)
+                elif ext in self.supported_image_types:
+                    result = await self._process_image(temp_file.name)
+                elif ext in self.supported_video_types:
+                    result = await self._process_video(temp_file.name)
+                else:
+                    # For text files, just return the content
+                    return content.decode('utf-8')
+
+                return result['content']
+            finally:
+                # Clean up the temporary file
+                os.unlink(temp_file.name)
 
     async def process_link(self, url: str) -> Dict[str, Any]:
         """Process content from various types of links."""

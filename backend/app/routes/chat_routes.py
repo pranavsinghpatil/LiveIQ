@@ -3,29 +3,102 @@ Chat routes for VoxStitch.
 Handles chat uploads, imports, and management.
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-import os
-import tempfile
-from typing import Optional
-from models.chat import ChatThread, Message
-from supabase_Client import supabase
-from datetime import datetime
+from typing import Optional, List
+from ..models.chat import Chat, ChatCreate, ChatThread, Message
+from ..services.auth_service import get_current_user
+from ..models.user_models import User
 from ..utils.media_processor import media_processor
-from models.group import ThreadGroup
+from ..models.group import ThreadGroup
+from ..services.supabase_client import supabase
+from datetime import datetime
+import logging
 
 # Create router with tags for better API documentation
-router = APIRouter(tags=["chats"])
+routes = APIRouter(tags=["chats"])
+logger = logging.getLogger(__name__)
 
-class ChatUpload(BaseModel):
-    user_id: str
-    title: str
-    content: str
-    media_type: str
+@routes.post("/group/create", response_model=ThreadGroup)
+async def create_thread_group(group: ThreadGroup, current_user: User = Depends(get_current_user)):
+    """Create a new thread group"""
+    try:
+        # Initialize group data
+        group_data = group.dict()
+        group_data["created_at"] = datetime.utcnow().isoformat()
+        group_data["user_id"] = current_user.id
+        if not group_data.get("thread_ids"):
+            group_data["thread_ids"] = []
 
-@router.post("")  # Empty string since prefix already includes /api/chats
-async def upload_chat(chat: ChatUpload, file: Optional[UploadFile] = None):
+        # Save to Supabase
+        res = supabase.table("thread_groups").insert(group_data).execute()
+        
+        if res.error:
+            logger.error(f"Error creating group: {str(res.error)}")
+            raise HTTPException(status_code=500, detail=str(res.error))
+            
+        return res.data[0]
+    except Exception as e:
+        logger.error(f"Error creating group: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@routes.get("/group/{group_id}", response_model=ThreadGroup)
+async def get_thread_group(group_id: str, current_user: User = Depends(get_current_user)):
+    """Get a thread group by ID"""
+    try:
+        res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
+        
+        if res.error:
+            logger.error(f"Error getting group: {str(res.error)}")
+            raise HTTPException(status_code=404, detail="Group not found")
+            
+        return res.data
+    except Exception as e:
+        logger.error(f"Error getting group: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@routes.post("/group/{group_id}/add_thread")
+async def add_thread_to_group(
+    group_id: str, 
+    thread_id: str, 
+    current_user: User = Depends(get_current_user)
+):
+    """Add a chat thread to a group"""
+    try:
+        # Get the group
+        res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
+        if res.error:
+            raise HTTPException(status_code=404, detail="Group not found")
+
+        group = res.data
+        
+        # Verify ownership
+        if group.get("user_id") != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to modify this group")
+
+        # Add thread ID if not already present
+        if thread_id not in group["thread_ids"]:
+            group["thread_ids"].append(thread_id)
+            group["updated_at"] = datetime.utcnow().isoformat()
+            
+            # Update the group
+            update_res = supabase.table("thread_groups").update(group).eq("id", group_id).execute()
+            if update_res.error:
+                raise HTTPException(status_code=500, detail=str(update_res.error))
+
+        return {"status": "success", "message": "Thread added to group"}
+    except Exception as e:
+        logger.error(f"Error adding thread to group: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@routes.post("/upload")
+async def upload_chat(
+    title: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+    content: Optional[str] = Form(None),
+    media_type: str = Form("text"),
+    current_user: User = Depends(get_current_user)
+):
     """
     Upload a chat from various sources:
     - Direct text content
@@ -33,96 +106,102 @@ async def upload_chat(chat: ChatUpload, file: Optional[UploadFile] = None):
     - Link import (YouTube, ChatGPT, webpage)
     """
     try:
-        # Handle direct content upload
-        if chat.media_type == "text":
-            return {  # Return dict directly, FastAPI will handle JSON conversion
-                "status": "success",
-                "data": {
-                    "type": "text",
-                    "content": chat.content,
-                    "title": chat.title,
-                    "user_id": chat.user_id
-                }
-            }
+        # Check user limits for chat imports
+        if current_user.guest and current_user.chat_imports_remaining <= 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="Guest user has reached chat import limit. Please upgrade to continue."
+            )
 
-        # Handle file upload
         if file:
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                temp_file.write(await file.read())
-                temp_path = temp_file.name
+            # Process the uploaded file
+            content = await media_processor.process_file(file)
+            media_type = media_processor.get_media_type(file.filename)
+        elif not content:
+            raise HTTPException(status_code=400, detail="Either file or content must be provided")
 
-            try:
-                result = await media_processor.process_file(temp_path, file.content_type)
-                os.unlink(temp_path)  # Clean up temp file
-                
-                return {
-                    "status": "success",
-                    "data": {
-                        **result,
-                        "title": chat.title,
-                        "user_id": chat.user_id
-                    }
-                }
-            except Exception as e:
-                if os.path.exists(temp_path):
-                    os.unlink(temp_path)
-                raise e
-
-        # Handle link import
-        if chat.media_type == "link":
-            result = await media_processor.process_link(chat.content)
-            return {
-                "status": "success",
-                "data": {
-                    **result,
-                    "title": chat.title,
-                    "user_id": chat.user_id
-                }
-            }
-
-        raise HTTPException(status_code=400, detail="Invalid media type")
-
+        # Create chat thread
+        chat_thread = ChatThread(
+            title=title,
+            source="upload",
+            format=media_type,
+            created_at=datetime.utcnow(),
+            content=content,
+            user_id=current_user.id
+        )
+        
+        # Save to Supabase
+        result = supabase.table("chat_threads").insert(chat_thread.dict()).execute()
+        
+        # Update user's chat import count if they're a guest
+        if current_user.guest:
+            supabase.table("users").update({
+                "chat_imports_remaining": current_user.chat_imports_remaining - 1
+            }).eq("id", current_user.id).execute()
+        
+        return JSONResponse(content={
+            "status": "success",
+            "data": result.data[0] if result.data else None
+        })
+        
     except Exception as e:
+        logger.error(f"Error uploading chat: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-# -------------------core------------------------
 
+@routes.post("/chat/create")
+async def create_chat(chat: ChatThread, current_user: User = Depends(get_current_user)):
+    """Create a new chat thread"""
+    try:
+        data = chat.dict()
+        data["created_at"] = datetime.utcnow().isoformat()
+        data["user_id"] = current_user.id
+        res = supabase.table("chat_threads").insert(data).execute()
+        return res.data[0]
+    except Exception as e:
+        logger.error(f"Error creating chat: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/chat/create")
-def create_chat(chat: ChatThread):
-    data = chat.dict()
-    data["created_at"] = datetime.now().isoformat()
-    res = supabase.table("chat_threads").insert(data).execute()
-    return res.data
+@routes.post("/message/send")
+async def send_message(msg: Message, current_user: User = Depends(get_current_user)):
+    """Send a message in a chat thread"""
+    try:
+        # Check user limits for messages
+        if current_user.guest and current_user.messages_remaining <= 0:
+            raise HTTPException(
+                status_code=403, 
+                detail="Guest user has reached message limit. Please upgrade to continue."
+            )
 
-@router.post("/message/send")
-def send_message(msg: Message):
-    msg.timestamp = datetime.now()
-    res = supabase.table("messages").insert(msg.dict()).execute()
-    return res.data
+        msg.timestamp = datetime.utcnow()
+        msg.user_id = current_user.id
+        res = supabase.table("messages").insert(msg.dict()).execute()
+        
+        # Update user's message count if they're a guest
+        if current_user.guest:
+            supabase.table("users").update({
+                "messages_remaining": current_user.messages_remaining - 1
+            }).eq("id", current_user.id).execute()
+            
+        return res.data[0]
+    except Exception as e:
+        logger.error(f"Error sending message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/chat/{chat_id}/messages")
-def get_chat_messages(chat_id: str):
-    res = supabase.table("messages").select("*").eq("thread_id", chat_id).order("timestamp").execute()
-    return res.data
-
-
-@router.post("/group/create")
-def create_thread_group(group: ThreadGroup):
-    group.created_at = datetime.now()
-    res = supabase.table("thread_groups").insert(group.dict()).execute()
-    return res.data
-
-@router.get("/group/{group_id}")
-def get_thread_group(group_id: str):
-    res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
-    return res.data
-
-@router.post("/group/{group_id}/add_thread")
-def add_thread_to_group(group_id: str, thread_id: str):
-    group = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute().data
-    if group:
-        group["thread_ids"].append(thread_id)
-        group["updated_at"] = datetime.now().isoformat()
-        supabase.table("thread_groups").update(group).eq("id", group_id).execute()
-        return {"status": "added"}
-    return {"error": "group not found"}
+@routes.get("/chat/{chat_id}/messages")
+async def get_chat_messages(chat_id: str, current_user: User = Depends(get_current_user)):
+    """Get all messages in a chat thread"""
+    try:
+        # First verify chat access
+        chat = supabase.table("chat_threads").select("user_id").eq("id", chat_id).single().execute()
+        if chat.error:
+            raise HTTPException(status_code=404, detail="Chat not found")
+            
+        if chat.data["user_id"] != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this chat")
+            
+        # Get messages
+        res = supabase.table("messages").select("*").eq("thread_id", chat_id).order("timestamp").execute()
+        return res.data
+    except Exception as e:
+        logger.error(f"Error getting messages: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,5 +1,5 @@
 """ 
-Authentication and security utilities for ChatSynth.
+Authentication and security utilities for VoxStitch.
 """
 
 from datetime import datetime, timedelta
@@ -9,17 +9,15 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
 import dotenv
-
-from database import get_db
-from models import User
+from .supabase_client import supabase, SUPABASE_JWT_SECRET
+from ..models.user_models import User
 
 # Load environment variables
 dotenv.load_dotenv()
 
 # JWT Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-keep-it-secret")
+SECRET_KEY = SUPABASE_JWT_SECRET
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -48,8 +46,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return encoded_jwt
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme)
 ) -> User:
     """Get current authenticated user from JWT token."""
     credentials_exception = HTTPException(
@@ -66,8 +63,15 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    user = db.query(User).filter(User.email == email).first()
-    if user is None:
-        raise credentials_exception
-        
-    return user
+    # Get user from Supabase
+    try:
+        response = supabase.table('users').select('*').eq('email', email).single().execute()
+        user = response.data
+        if not user:
+            raise credentials_exception
+        return User(**user)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching user: {str(e)}"
+        )
