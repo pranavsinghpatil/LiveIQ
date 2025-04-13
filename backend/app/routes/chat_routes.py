@@ -9,8 +9,11 @@ from pydantic import BaseModel
 import os
 import tempfile
 from typing import Optional
-
+from models.chat import ChatThread, Message
+from supabase_Client import supabase
+from datetime import datetime
 from ..utils.media_processor import media_processor
+from models.group import ThreadGroup
 
 # Create router with tags for better API documentation
 router = APIRouter(tags=["chats"])
@@ -81,3 +84,45 @@ async def upload_chat(chat: ChatUpload, file: Optional[UploadFile] = None):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+# -------------------core------------------------
+
+
+@router.post("/chat/create")
+def create_chat(chat: ChatThread):
+    data = chat.dict()
+    data["created_at"] = datetime.now().isoformat()
+    res = supabase.table("chat_threads").insert(data).execute()
+    return res.data
+
+@router.post("/message/send")
+def send_message(msg: Message):
+    msg.timestamp = datetime.now()
+    res = supabase.table("messages").insert(msg.dict()).execute()
+    return res.data
+
+@router.get("/chat/{chat_id}/messages")
+def get_chat_messages(chat_id: str):
+    res = supabase.table("messages").select("*").eq("thread_id", chat_id).order("timestamp").execute()
+    return res.data
+
+
+@router.post("/group/create")
+def create_thread_group(group: ThreadGroup):
+    group.created_at = datetime.now()
+    res = supabase.table("thread_groups").insert(group.dict()).execute()
+    return res.data
+
+@router.get("/group/{group_id}")
+def get_thread_group(group_id: str):
+    res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
+    return res.data
+
+@router.post("/group/{group_id}/add_thread")
+def add_thread_to_group(group_id: str, thread_id: str):
+    group = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute().data
+    if group:
+        group["thread_ids"].append(thread_id)
+        group["updated_at"] = datetime.now().isoformat()
+        supabase.table("thread_groups").update(group).eq("id", group_id).execute()
+        return {"status": "added"}
+    return {"error": "group not found"}
