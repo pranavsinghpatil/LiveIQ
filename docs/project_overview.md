@@ -1,69 +1,37 @@
-# ChatSynth - AI Chat Log Aggregator
+ 1. Chat Thread Manager
+A module that:
 
-## Project Overview
-ChatSynth is a comprehensive chat log aggregation platform designed to help users consolidate, manage, and analyze their AI chat conversations from various sources. The platform provides a unified dashboard for easy access, search, and organization of chat logs.
+Handles multiple chat threads (from different bots or formats)
 
-## Target Audience
-- AI researchers and developers
-- Data scientists working with conversational AI
-- Users who frequently interact with multiple AI chatbots
-- Professionals who need to track and analyze AI conversations
+Stores messages + context per thread
 
-## Functional Requirements
-1. User Authentication
-   - User registration and login
-   - Secure password management
-   - Session handling
+Knows which threads are linked or relevant to each other
 
-2. Chat Log Management
-   - Import chat logs via file upload or URL
-   - Support for multiple chat log formats
-   - Automatic parsing and standardization
-   - Bulk import capabilities
+Can merge or hybridize them
 
-3. Dashboard Features
-   - Unified view of all chat logs
-   - Chronological and categorical organization
-   - Real-time updates
-   - Customizable views
+🧠 Think of this like a “Knowledge Graph of Chats”
 
-4. Search and Filter
-   - Full-text search across all chat logs
-   - Advanced filtering options (date, source, topic)
-   - Tag-based organization
-   - Search history
+🧠 2. Context Engine (Benchmarked Recall)
+Every message updates context in a persistent structure
 
-5. Analytics and Summarization
-   - Chat log summarization
-   - Basic analytics (conversation length, response times)
-   - Topic clustering
-   - Export capabilities
+Has benchmarks: "If topic changed," make a semantic cut
 
-## Non-Functional Requirements
-1. Performance
-   - Page load time < 2 seconds
-   - Search results returned within 1 second
-   - Support for large chat log files (up to 10MB)
+Recalls messages before/after benchmark if relevance is high
 
-2. Security
-   - Encrypted data storage
-   - Secure API endpoints
-   - Rate limiting
-   - Input validation
+So user never says: “Hey, I told this in previous chat…”
 
-3. Scalability
-   - Support for multiple concurrent users
-   - Efficient database queries
-   - Caching mechanisms
+🤝 3. Hybrid Chat Assistant
+Can talk across multiple threads with context of each
 
-4. Usability
-   - Responsive design
-   - Intuitive UI/UX
-   - Cross-browser compatibility
-   - Mobile-friendly interface
+Knows which chat said what
 
-5. Reliability
-   - 99.9% uptime
-   - Regular backups
-   - Error logging and monitoring
-   - Graceful error handling
+Can pull messages from other chats to support current answer
+
+🎙️ 4. Podcast Simulation Engine
+Takes in YouTube/Spotify link or transcript
+
+Parses speakers
+
+Allows you to chat with each speaker individually
+
+Bonus: Join the podcast conversation yourself (multi-speaker chat)

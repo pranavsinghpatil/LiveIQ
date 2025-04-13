@@ -12,6 +12,7 @@ from .routes.auth_routes import routes as auth_router
 from .routes.chat_routes import routes as chat_router
 import jwt
 from datetime import datetime
+from .routes import podcast_simulator
 
 app = FastAPI(
     title="VoxStitch API",
@@ -149,3 +150,4 @@ def login_user(user: UserCreate):
 # Include routers for additional functionality
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
+app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
