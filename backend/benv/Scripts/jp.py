@@ -1,4 +1,4 @@
-#!D:\pycharm pros\ChatSynth\backend\.venv\Scripts\python.exe
+#!D:\pycharm pros\ChatSynth\backend\benv\Scripts\python.exe
 
 import sys
 import json
