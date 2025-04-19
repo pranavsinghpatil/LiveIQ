@@ -20,6 +20,7 @@ import tempfile
 from core.ingestion.chat_ingestor import chat_ingestor
 from supabase import create_client, Client
 from dotenv import load_dotenv
+import magic
 
 load_dotenv()
 supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
@@ -115,10 +116,14 @@ async def upload_chat(
         if media_type == "file":
             if not file:
                 raise HTTPException(status_code=400, detail="File not uploaded")
+            logger.info(f"File received: name={file.filename}, type={file.content_type}")
             with tempfile.NamedTemporaryFile(delete=False) as temp:
                 temp.write(await file.read())
                 file_path = temp.name
-                file_type = file.content_type
+            # Use python-magic for accurate detection
+            file_type = magic.from_file(file_path, mime=True)
+            logger.info(f"Detected file type (magic): {file_type}")
+            logger.info(f"File saved at: {file_path}")
 
         # Call ingestor
         result = await chat_ingestor.ingest(
@@ -128,12 +133,12 @@ async def upload_chat(
             file_type=file_type
         )
 
-        # Clean up temp file if exists
-        if file_path and os.path.exists(file_path):
-            os.remove(file_path)
-
+        print(f"[DEBUG] media_type: {media_type}, file_path: {file_path}")
+        print(f"[DEBUG] ingestion result: {result}")
+        logger.info(f"Ingestor result: {result}")
         # If no content could be extracted, return a clear error and skip Supabase insert
         if result.get("content") is None:
+            print("[DEBUG] No extractable content found, returning error response.")
             return {
                 "status": "error",
                 "message": "Unsupported file type or failed to extract content",
@@ -150,8 +155,7 @@ async def upload_chat(
         insert_res = supabase.table("chats").insert(chat_data).execute()
         if getattr(insert_res, 'error', None):
             raise HTTPException(status_code=500, detail="Failed to save chat to database")
-        # Return only the relevant fields
-        return {
+        response = {
             "status": "success",
             "data": {
                 "id": insert_res.data[0]["id"] if insert_res.data and "id" in insert_res.data[0] else None,
@@ -161,6 +165,8 @@ async def upload_chat(
                 "media_type": media_type
             }
         }
+        print(f"[DEBUG] Final response: {response}")
+        return response
 
     except Exception as e:
         print(traceback.format_exc())  # Print full error trace
@@ -281,10 +287,14 @@ async def upload_chat(
         if media_type == "file":
             if not file:
                 raise HTTPException(status_code=400, detail="File not uploaded")
+            logger.info(f"File received: name={file.filename}, type={file.content_type}")
             with tempfile.NamedTemporaryFile(delete=False) as temp:
                 temp.write(await file.read())
                 file_path = temp.name
-                file_type = file.content_type
+            # Use python-magic for accurate detection
+            file_type = magic.from_file(file_path, mime=True)
+            logger.info(f"Detected file type (magic): {file_type}")
+            logger.info(f"File saved at: {file_path}")
 
         # Call ingestor
         result = await chat_ingestor.ingest(
