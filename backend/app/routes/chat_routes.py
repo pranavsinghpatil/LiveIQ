@@ -14,6 +14,7 @@ from ..models.group import ThreadGroup
 from ..services.supabase_client import supabase
 from datetime import datetime
 import logging
+import traceback
 
 # Create router with tags for better API documentation
 routes = APIRouter(tags=["chats"])
@@ -205,3 +206,39 @@ async def get_chat_messages(chat_id: str, current_user: User = Depends(get_curre
     except Exception as e:
         logger.error(f"Error getting messages: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+from core.services.chat_service import send_message, get_history
+
+router = APIRouter()
+
+class ChatRequest(BaseModel):
+    chat_id: str
+    user_input: str
+    provider: Optional[str] = "google"
+    model: Optional[str] = None
+
+@router.post("/chat")
+def chat_endpoint(request: ChatRequest):
+    try:
+        logger.info(f"Received /api/chat request: chat_id={request.chat_id}, provider={request.provider}, model={request.model}")
+        logger.info(f"User input: {request.user_input}")
+        reply = send_message(
+            chat_id=request.chat_id,
+            user_input=request.user_input,
+            provider=request.provider,
+            model=request.model
+        )
+        return {"reply": reply}
+    except (ValueError, TypeError) as ve:
+        logger.error(f"Validation error in /api/chat: {str(ve)}")
+        return JSONResponse(status_code=400, content={"error": str(ve)})
+    except Exception as e:
+        logger.error(f"Internal error in /api/chat: {str(e)}\n" + traceback.format_exc())
+        return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
+
+@router.get("/chat/history/{chat_id}")
+def get_chat_history(chat_id: str):
+    return {"history": get_history(chat_id)}

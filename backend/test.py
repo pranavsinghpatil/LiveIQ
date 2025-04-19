@@ -5,7 +5,7 @@ from core.llm.llm_client import chat
 
 response = chat(
     messages=[
-        {"role": "user", "content": "What is your name?"},
+        {"role": "user", "content": "What are the insights of the ai revolution?"},
     ],
     provider="google",  # or "openai", "anthropic", etc.
 )

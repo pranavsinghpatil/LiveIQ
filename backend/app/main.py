@@ -13,6 +13,7 @@ from .routes.chat_routes import routes as chat_router
 import jwt
 from datetime import datetime
 from .routes import podcast_simulator
+from .routes.chat_routes import router as chat_router
 # from core.podcast.route import router as podcast_router
 
 app = FastAPI(
@@ -152,6 +153,7 @@ def login_user(user: UserCreate):
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
 app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
+app.include_router(chat_router, prefix="/api", tags=["chat"])
 
 # Debug: Print all registered routes
 print("\n=== REGISTERED ROUTES ===")

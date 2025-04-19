@@ -74,7 +74,7 @@ DEFAULT_MODELS = {
     ModelProvider.OPENAI: "gpt-3.5-turbo",
     ModelProvider.ANTHROPIC: "claude-3-opus-20240229",
     ModelProvider.MISTRAL: "mistral-large-latest",
-    ModelProvider.GOOGLE: "gemini-1.5-pro",
+    ModelProvider.GOOGLE: "gemini-2.0-flash",
     ModelProvider.DEEPSEEK: "deepseek-chat"
 }
 
@@ -110,6 +110,18 @@ def retry_on_error(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
                     time.sleep(delay)
         return wrapper
     return decorator
+
+# Robust global message validation helper
+# Handles both dicts and objects with 'content' attribute
+def validate_messages(messages: List[Any]):
+    def extract_content(msg):
+        if hasattr(msg, 'content'):
+            return getattr(msg, 'content', '').strip()
+        elif isinstance(msg, dict):
+            return msg.get('content', '').strip()
+        return ''
+    if not messages or all(not extract_content(msg) for msg in messages):
+        raise ValueError("Chat input validation failed: Empty message(s) found.")
 
 class LLMClient:
     """Unified client for multiple LLM providers"""
@@ -296,6 +308,7 @@ class LLMClient:
     
     def _chat_openai(self, messages: List[Message], model: Optional[str] = None, max_tokens: int = 1000, temperature: float = 0.7) -> str:
         """Generate chat response using OpenAI"""
+        validate_messages(messages)
         if openai is None:
             raise LLMClientError("OpenAI library not installed. Please install openai.")
         if not self.openai_api_key:
@@ -386,6 +399,7 @@ class LLMClient:
     
     def _chat_mistral(self, messages: List[Message], model: Optional[str] = None, max_tokens: int = 1000, temperature: float = 0.7) -> str:
         """Generate chat response using Mistral AI"""
+        validate_messages(messages)
         if MistralClient is None or ChatMessage is None:
             raise LLMClientError("Mistral AI library not installed. Please install mistralai.")
         if not self.mistral_client:
@@ -437,33 +451,36 @@ class LLMClient:
     @retry_on_error()
     def _chat_google(self, messages: List[Message], model: Optional[str] = None, max_tokens: int = 1000, temperature: float = 0.7) -> str:
         """Generate chat response using Google Gemini"""
+        def extract_content(m):
+            if hasattr(m, 'content'):
+                return getattr(m, 'content', '')
+            elif isinstance(m, dict):
+                return m.get('content', '')
+            return ''
+        validate_messages(messages)
         if genai is None:
             raise LLMClientError("Google Generative AI library not installed. Please install google-generativeai.")
         if not self.google_api_key:
             raise LLMClientError("Google API key not configured")
         model = model or DEFAULT_MODELS[ModelProvider.GOOGLE]
-        
+        logger.info(f"[Gemini] Using model: {model}")
+        logger.info(f"[Gemini] API key present: {bool(self.google_api_key)}")
+        logger.info(f"[Gemini] Messages: {[extract_content(m) for m in messages]}")
         try:
             gemini_model = genai.GenerativeModel(model_name=model)
-            
-            # Convert to Gemini format
-            gemini_messages = []
-            for msg in messages:
-                role = "user" if msg.role in ["user", "human"] else "model"
-                gemini_messages.append({"role": role, "parts": [msg.content]})
-            
-            chat = gemini_model.start_chat(history=gemini_messages)
+            chat = gemini_model.start_chat(history=[])
             response = chat.send_message(
-                "",  # Empty message to get response based on history
-                generation_config=genai.GenerationConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=temperature
-                )
+                [extract_content(m) for m in messages],
+                generation_config={
+                    "max_output_tokens": max_tokens,
+                    "temperature": temperature,
+                }
             )
+            logger.info(f"[Gemini] Raw response: {response}")
             return response.text
         except Exception as e:
             logger.error(f"Google Gemini API error: {e}")
-            raise LLMClientError(f"Google Gemini chat failed: {str(e)}")
+            raise LLMClientError(f"Google Gemini generation failed: {str(e)}")
     
     # DeepSeek implementation
     @retry_on_error()
