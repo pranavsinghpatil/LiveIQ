@@ -3,7 +3,7 @@ Chat routes for VoxStitch.
 Handles chat uploads, imports, and management.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
 from typing import Optional, List
 from ..models.chat import Chat, ChatCreate, ChatThread, Message
@@ -13,8 +13,16 @@ from ..utils.media_processor import media_processor
 from ..models.group import ThreadGroup
 from ..services.supabase_client import supabase
 from datetime import datetime
+import os
 import logging
 import traceback
+import tempfile
+from core.ingestion.chat_ingestor import chat_ingestor
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
+supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 # Create router with tags for better API documentation
 routes = APIRouter(tags=["chats"])
@@ -94,59 +102,68 @@ async def add_thread_to_group(
 
 @routes.post("/upload")
 async def upload_chat(
+    user_id: str = Form(...),
     title: str = Form(...),
-    file: Optional[UploadFile] = File(None),
+    media_type: str = Form(...),
     content: Optional[str] = Form(None),
-    media_type: str = Form("text"),
-    current_user: User = Depends(get_current_user)
+    file: Optional[UploadFile] = File(None)
 ):
-    """
-    Upload a chat from various sources:
-    - Direct text content
-    - File upload (PDF, image, video)
-    - Link import (YouTube, ChatGPT, webpage)
-    """
     try:
-        # Check user limits for chat imports
-        if current_user.guest and current_user.chat_imports_remaining <= 0:
-            raise HTTPException(
-                status_code=403, 
-                detail="Guest user has reached chat import limit. Please upgrade to continue."
-            )
+        print(f"Received: user_id={user_id}, title={title}, media_type={media_type}, content={content}, file={file}")
+        file_path, file_type = None, None
 
-        if file:
-            # Process the uploaded file
-            content = await media_processor.process_file(file)
-            media_type = media_processor.get_media_type(file.filename)
-        elif not content:
-            raise HTTPException(status_code=400, detail="Either file or content must be provided")
+        if media_type == "file":
+            if not file:
+                raise HTTPException(status_code=400, detail="File not uploaded")
+            with tempfile.NamedTemporaryFile(delete=False) as temp:
+                temp.write(await file.read())
+                file_path = temp.name
+                file_type = file.content_type
 
-        # Create chat thread
-        chat_thread = ChatThread(
-            title=title,
-            source="upload",
-            format=media_type,
-            created_at=datetime.utcnow(),
+        # Call ingestor
+        result = await chat_ingestor.ingest(
+            media_type=media_type,
             content=content,
-            user_id=current_user.id
+            file_path=file_path,
+            file_type=file_type
         )
-        
-        # Save to Supabase
-        result = supabase.table("chat_threads").insert(chat_thread.dict()).execute()
-        
-        # Update user's chat import count if they're a guest
-        if current_user.guest:
-            supabase.table("users").update({
-                "chat_imports_remaining": current_user.chat_imports_remaining - 1
-            }).eq("id", current_user.id).execute()
-        
-        return JSONResponse(content={
+
+        # Clean up temp file if exists
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+
+        # If no content could be extracted, return a clear error and skip Supabase insert
+        if result.get("content") is None:
+            return {
+                "status": "error",
+                "message": "Unsupported file type or failed to extract content",
+                "metadata": result.get("metadata", {})
+            }
+
+        chat_data = {
+            "user_id": user_id,
+            "title": title,
+            "content": result.get("content"),
+            "media_type": media_type,
+            "created_at": result.get("created_at") or None,
+        }
+        insert_res = supabase.table("chats").insert(chat_data).execute()
+        if getattr(insert_res, 'error', None):
+            raise HTTPException(status_code=500, detail="Failed to save chat to database")
+        # Return only the relevant fields
+        return {
             "status": "success",
-            "data": result.data[0] if result.data else None
-        })
-        
+            "data": {
+                "id": insert_res.data[0]["id"] if insert_res.data and "id" in insert_res.data[0] else None,
+                "user_id": user_id,
+                "title": title,
+                "content": result.get("content"),
+                "media_type": media_type
+            }
+        }
+
     except Exception as e:
-        logger.error(f"Error uploading chat: {str(e)}")
+        print(traceback.format_exc())  # Print full error trace
         raise HTTPException(status_code=500, detail=str(e))
 
 @routes.post("/chat/create")
@@ -242,3 +259,64 @@ def chat_endpoint(request: ChatRequest):
 @router.get("/chat/history/{chat_id}")
 def get_chat_history(chat_id: str):
     return {"history": get_history(chat_id)}
+
+class ChatUploadRequest(BaseModel):
+    user_id: str
+    title: str
+    content: Optional[str] = None
+    media_type: str  # "text", "file", "link"
+
+@router.post("/upload")
+async def upload_chat(
+    user_id: str = Form(...),
+    title: str = Form(...),
+    media_type: str = Form(...),
+    content: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None)
+):
+    try:
+        print(f"Received: user_id={user_id}, title={title}, media_type={media_type}, content={content}, file={file}")
+        file_path, file_type = None, None
+
+        if media_type == "file":
+            if not file:
+                raise HTTPException(status_code=400, detail="File not uploaded")
+            with tempfile.NamedTemporaryFile(delete=False) as temp:
+                temp.write(await file.read())
+                file_path = temp.name
+                file_type = file.content_type
+
+        # Call ingestor
+        result = await chat_ingestor.ingest(
+            media_type=media_type,
+            content=content,
+            file_path=file_path,
+            file_type=file_type
+        )
+
+        # Clean up temp file if exists
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+
+        return {
+            "status": "success",
+            "data": {
+                "user_id": user_id,
+                "title": title,
+                **result
+            }
+        }
+
+    except Exception as e:
+        print(traceback.format_exc())  # Print full error trace
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/user/{user_id}")
+def list_chats(user_id: str):
+    try:
+        res = supabase.from_("chats").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        if res.error:
+            raise HTTPException(status_code=500, detail=str(res.error))
+        return {"status": "success", "chats": res.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

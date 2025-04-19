@@ -17,7 +17,6 @@ def send_message(
     """
     Handle chat message, append to history, and get LLM response.
     """
-
     # Initialize if new chat
     if chat_id not in chat_contexts:
         chat_contexts[chat_id] = []
@@ -25,9 +24,12 @@ def send_message(
     # Add user input to chat history
     chat_contexts[chat_id].append(Message(role="user", content=user_input))
 
+    # Ensure all messages are Message objects or dicts (no list of lists, etc.)
+    messages = chat_contexts[chat_id]
+
     # Call LLM
     response_text = chat_with_llm(
-        messages=chat_contexts[chat_id],
+        messages=messages,
         provider=provider,
         model=model
     )

@@ -93,6 +93,10 @@ class Message:
         """For backward compatibility"""
         return {"role": self.role, "content": self.content}
 
+    def __getitem__(self, key):
+        # Allow dict-style access for compatibility
+        return getattr(self, key)
+
 def retry_on_error(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
     """Decorator for retrying API calls on failure"""
     def decorator(func):
@@ -113,13 +117,15 @@ def retry_on_error(max_retries=MAX_RETRIES, delay=RETRY_DELAY):
 
 # Robust global message validation helper
 # Handles both dicts and objects with 'content' attribute
+def extract_content(msg):
+    # Handles Pydantic/BaseModel (Message), dict, or fallback
+    if hasattr(msg, 'content'):
+        return getattr(msg, 'content', '').strip()
+    elif isinstance(msg, dict):
+        return msg.get('content', '').strip()
+    return ''
+
 def validate_messages(messages: List[Any]):
-    def extract_content(msg):
-        if hasattr(msg, 'content'):
-            return getattr(msg, 'content', '').strip()
-        elif isinstance(msg, dict):
-            return msg.get('content', '').strip()
-        return ''
     if not messages or all(not extract_content(msg) for msg in messages):
         raise ValueError("Chat input validation failed: Empty message(s) found.")
 
@@ -449,14 +455,8 @@ class LLMClient:
             raise LLMClientError(f"Google Gemini generation failed: {str(e)}")
     
     @retry_on_error()
-    def _chat_google(self, messages: List[Message], model: Optional[str] = None, max_tokens: int = 1000, temperature: float = 0.7) -> str:
+    def _chat_google(self, messages: List[Any], model: Optional[str] = None, max_tokens: int = 1000, temperature: float = 0.7) -> str:
         """Generate chat response using Google Gemini"""
-        def extract_content(m):
-            if hasattr(m, 'content'):
-                return getattr(m, 'content', '')
-            elif isinstance(m, dict):
-                return m.get('content', '')
-            return ''
         validate_messages(messages)
         if genai is None:
             raise LLMClientError("Google Generative AI library not installed. Please install google-generativeai.")

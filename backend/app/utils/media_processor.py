@@ -32,32 +32,42 @@ class MediaProcessor:
         else:
             return 'text'
 
-    async def process_file(self, file: UploadFile) -> str:
-        """Process uploaded files based on their type."""
-        # Create a temporary file to store the upload
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+    async def process_file(self, file_path: str) -> Dict[str, Any]:
+        """Process files based on their type."""
+        try:
+            with open(file_path, 'rb') as f:
+                content = f.read()
+            ext = os.path.splitext(file_path)[1].lower()
+            if ext == '.pdf':
+                result = await self._process_pdf(file_path)
+            elif ext in self.supported_image_types:
+                result = await self._process_image(file_path)
+            elif ext in self.supported_video_types:
+                result = await self._process_video(file_path)
+            elif ext in {'.txt', '.md', '.csv', '.json'}:
+                # Only decode as text for known text file types
+                try:
+                    text_content = content.decode('utf-8')
+                except UnicodeDecodeError:
+                    text_content = None
+                return {
+                    "type": "file",
+                    "content": text_content,
+                    "metadata": {"warning": "Could not decode file as UTF-8" if text_content is None else ""}
+                }
+            else:
+                # For unknown binary types, do not decode
+                return {
+                    "type": "file",
+                    "content": None,
+                    "metadata": {"error": "Unsupported or binary file type"}
+                }
+            return result
+        finally:
             try:
-                # Write uploaded file to temporary file
-                content = await file.read()
-                temp_file.write(content)
-                temp_file.flush()
-
-                # Process based on file type
-                ext = os.path.splitext(file.filename)[1].lower()
-                if ext == '.pdf':
-                    result = await self._process_pdf(temp_file.name)
-                elif ext in self.supported_image_types:
-                    result = await self._process_image(temp_file.name)
-                elif ext in self.supported_video_types:
-                    result = await self._process_video(temp_file.name)
-                else:
-                    # For text files, just return the content
-                    return content.decode('utf-8')
-
-                return result['content']
-            finally:
-                # Clean up the temporary file
-                os.unlink(temp_file.name)
+                os.unlink(file_path)
+            except Exception as e:
+                print(f"Failed to delete temp file: {file_path}: {e}")
 
     async def process_link(self, url: str) -> Dict[str, Any]:
         """Process content from various types of links."""
@@ -75,6 +85,13 @@ class MediaProcessor:
             text = ""
             for page in doc:
                 text += page.get_text()
+            doc.close()
+            if not text.strip():
+                return {
+                    "type": "pdf",
+                    "content": None,
+                    "metadata": {"error": "No extractable text found in PDF (may be scanned images)."}
+                }
             return {
                 "type": "pdf",
                 "content": text,
@@ -84,7 +101,11 @@ class MediaProcessor:
                 }
             }
         except Exception as e:
-            raise Exception(f"PDF processing error: {str(e)}")
+            return {
+                "type": "pdf",
+                "content": None,
+                "metadata": {"error": f"PDF processing error: {str(e)}"}
+            }
 
     async def _process_image(self, file_path: str) -> Dict[str, Any]:
         """Extract text from images using OCR."""
