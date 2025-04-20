@@ -14,3 +14,14 @@ class PodcastSimulator:
         prompt = f"{self.personas[speaker]}\n\nUser: {user_msg}\n{speaker}:"
         # Here call your language model
         return f"(Simulated) {speaker} replies to: '{user_msg}'"
+
+
+"""
+📌 Optionally Needed:
+
+GET /api/podcast/list	Get list of uploaded transcripts/speakers (if you store them persistently later)
+
+DELETE /api/podcast/reset	Reset stored transcript (for dev/testing resets)
+
+For now, your current three are sufficient for the MVP. If you later add speaker detection / segment splitting / LLM memory, then we’ll extend.
+"""

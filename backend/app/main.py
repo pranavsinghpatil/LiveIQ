@@ -9,14 +9,14 @@ from .models.user_models import User, UserCreate
 from .models.chat import Chat, ChatCreate
 from .services.supabase_client import supabase, SUPABASE_JWT_SECRET
 from .routes.auth_routes import routes as auth_router
-from .routes.chat_routes import routes as chat_router
+from .routes.chat_routes import router as chat_router
 import jwt
 from datetime import datetime
 from .routes import podcast_simulator
 from .routes.chat_routes import router as chat_router
 from app.routes.hybrid_routes import router as hybrid_router
 from .routes import chat_routes
-
+from core.llm.llm_routes import router as llm_router
 
 # from core.podcast.route import router as podcast_router
 
@@ -169,9 +169,11 @@ def login_user(user: UserCreate):
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
 app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
-app.include_router(hybrid_router, prefix="/api")
+app.include_router(hybrid_router)
 app.include_router(chat_routes.router)
 app.include_router(chat_router, prefix="/api/chats", tags=["chat-messages"])
+
+app.include_router(llm_router)
 
 # Debug: Print all registered routes
 

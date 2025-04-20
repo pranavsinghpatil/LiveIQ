@@ -11,11 +11,14 @@ router = APIRouter(
 simulator_instance = None
 
 @router.post("/upload/")
-def upload_transcript(payload: TranscriptUpload):
+def upload_transcript(payload: dict):
     """Upload and process a podcast transcript"""
     global simulator_instance
     try:
-        simulator_instance = PodcastSimulator(payload.raw_transcript)
+        transcript = payload.get("transcript")
+        if not transcript:
+            return {"status": "error", "message": "Missing 'transcript' field in request."}
+        simulator_instance = PodcastSimulator(transcript)
         return {
             "status": "success", 
             "message": "Transcript uploaded and processed", 
@@ -25,15 +28,19 @@ def upload_transcript(payload: TranscriptUpload):
         return {"status": "error", "message": f"Error processing transcript: {str(e)}"}
 
 @router.post("/chat/")
-def chat_with_speaker(payload: ChatRequest):
+def chat_with_speaker(payload: dict):
     """Chat with a specific speaker from the podcast"""
     global simulator_instance
     if not simulator_instance:
         return {"status": "error", "message": "Upload transcript first."}
     
     try:
-        response = simulator_instance.get_response(payload.speaker, payload.user_msg)
-        return {"status": "success", "speaker": payload.speaker, "response": response}
+        speaker = payload.get("speaker")
+        user_msg = payload.get("user_msg") or payload.get("message")
+        if not speaker or not user_msg:
+            return {"status": "error", "message": "Missing 'speaker' or 'user_msg' in request."}
+        response = simulator_instance.get_response(speaker, user_msg)
+        return {"status": "success", "speaker": speaker, "response": response}
     except Exception as e:
         return {"status": "error", "message": f"Error getting response: {str(e)}"}
 

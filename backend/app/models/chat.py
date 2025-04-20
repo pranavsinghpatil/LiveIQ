@@ -44,6 +44,7 @@ class ChatThread(BaseModel):
 
 class ChatMessage(BaseModel):
     chat_id: str
+    user_id: str  # <-- add this line
     role: str  # 'user' or 'assistant'
     content: str
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)

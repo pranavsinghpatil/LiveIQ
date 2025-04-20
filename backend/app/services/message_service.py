@@ -8,6 +8,7 @@ def insert_message(message: ChatMessage):
     payload = {
         "id": str(uuid4()),
         "chat_id": message.chat_id,
+        "user_id": message.user_id,  # Ensure user_id is included
         "role": message.role,
         "content": message.content,
         "timestamp": message.timestamp.isoformat() if message.timestamp else None,
