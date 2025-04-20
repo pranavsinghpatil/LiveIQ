@@ -6,12 +6,13 @@ Handles chat uploads, imports, and management.
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
 from typing import Optional, List
-from ..models.chat import Chat, ChatCreate, ChatThread, Message
+from ..models.chat import Chat, ChatCreate, ChatThread, Message, ChatMessage
 from ..services.auth_service import get_current_user
 from ..models.user_models import User
 from ..utils.media_processor import media_processor
 from ..models.group import ThreadGroup
 from ..services.supabase_client import supabase
+from ..services.context_service import build_context
 from datetime import datetime
 import os
 import logging
@@ -21,6 +22,7 @@ from core.ingestion.chat_ingestor import chat_ingestor
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import magic
+from ..services.message_service import insert_message, get_messages_by_chat
 
 load_dotenv()
 supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
@@ -152,21 +154,47 @@ async def upload_chat(
             "media_type": media_type,
             "created_at": result.get("created_at") or None,
         }
-        insert_res = supabase.table("chats").insert(chat_data).execute()
-        if getattr(insert_res, 'error', None):
-            raise HTTPException(status_code=500, detail="Failed to save chat to database")
-        response = {
-            "status": "success",
-            "data": {
-                "id": insert_res.data[0]["id"] if insert_res.data and "id" in insert_res.data[0] else None,
-                "user_id": user_id,
-                "title": title,
-                "content": result.get("content"),
-                "media_type": media_type
+        
+        # Insert into Supabase
+        logger.info(f"Inserting into Supabase: {chat_data}")
+        try:
+            insert_res = supabase.table("chats").insert(chat_data).execute()
+            
+            # Log the raw response for debugging
+            logger.info(f"Raw Supabase response: {insert_res}")
+            
+            if hasattr(insert_res, 'error') and insert_res.error:
+                logger.error(f"Supabase insert error: {insert_res.error}")
+                raise HTTPException(status_code=500, detail=f"Failed to save chat to database: {insert_res.error}")
+                
+            # Log the response data for debugging
+            logger.info(f"Supabase insert data: {insert_res.data}")
+            
+            # Extract the ID from the response
+            chat_id = None
+            if insert_res.data and len(insert_res.data) > 0:
+                chat_id = insert_res.data[0].get("id")
+                logger.info(f"Extracted chat ID: {chat_id}")
+            else:
+                logger.warning("No data returned from Supabase insert")
+                
+            response = {
+                "status": "success",
+                "data": {
+                    "id": chat_id,
+                    "user_id": user_id,
+                    "title": title,
+                    "content": result.get("content"),
+                    "media_type": media_type
+                }
             }
-        }
-        print(f"[DEBUG] Final response: {response}")
-        return response
+            logger.info(f"Final response: {response}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Exception during Supabase insert: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
     except Exception as e:
         print(traceback.format_exc())  # Print full error trace
@@ -308,25 +336,230 @@ async def upload_chat(
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
 
-        return {
-            "status": "success",
-            "data": {
-                "user_id": user_id,
-                "title": title,
-                **result
+        # If no content could be extracted, return a clear error and skip Supabase insert
+        if result.get("content") is None:
+            logger.warning("No extractable content found, returning error response.")
+            return {
+                "status": "error",
+                "message": "Unsupported file type or failed to extract content",
+                "metadata": result.get("metadata", {})
             }
-        }
 
+        # Prepare data for Supabase
+        chat_data = {
+            "user_id": user_id,
+            "title": title,
+            "content": result.get("content"),
+            "media_type": media_type,
+            "created_at": result.get("created_at") or None,
+        }
+        
+        # Insert into Supabase
+        logger.info(f"Inserting into Supabase: {chat_data}")
+        try:
+            insert_res = supabase.table("chats").insert(chat_data).execute()
+            
+            # Log the raw response for debugging
+            logger.info(f"Raw Supabase response: {insert_res}")
+            
+            if hasattr(insert_res, 'error') and insert_res.error:
+                logger.error(f"Supabase insert error: {insert_res.error}")
+                raise HTTPException(status_code=500, detail=f"Failed to save chat to database: {insert_res.error}")
+                
+            # Log the response data for debugging
+            logger.info(f"Supabase insert data: {insert_res.data}")
+            
+            # Extract the ID from the response
+            chat_id = None
+            if insert_res.data and len(insert_res.data) > 0:
+                chat_id = insert_res.data[0].get("id")
+                logger.info(f"Extracted chat ID: {chat_id}")
+            else:
+                logger.warning("No data returned from Supabase insert")
+                
+            response = {
+                "status": "success",
+                "data": {
+                    "id": chat_id,
+                    "user_id": user_id,
+                    "title": title,
+                    "content": result.get("content"),
+                    "media_type": media_type
+                }
+            }
+            logger.info(f"Final response: {response}")
+            return response
+            
+        except Exception as e:
+            logger.error(f"Exception during Supabase insert: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+            
     except Exception as e:
         print(traceback.format_exc())  # Print full error trace
         raise HTTPException(status_code=500, detail=str(e))
 
+# ------------------- LLM integration ROUTES -------------------
+
+from ..services.context_service import build_context
+from ..services.message_service import save_message
+from core.llm.llm_client import chat as llm_chat
+
+@router.post("/reply")
+async def generate_reply(payload: dict):
+    """
+    Takes a user message, sends to LLM with history context,
+    returns + stores assistant reply
+    """
+    try:
+        chat_id = payload["chat_id"]
+        user_id = payload["user_id"]
+        user_message = payload["message"]
+        provider = payload.get("provider", "google")  # default: Gemini
+        model = payload.get("model")  # Optional
+
+        # 1. Save user message
+        save_message(chat_id, user_id, "user", user_message)
+
+        # 2. Build chat context
+        context = build_context(chat_id)
+
+        # 3. Prepare LLM messages (system + history + new msg)
+        messages = [{"role": "system", "content": "You are a helpful assistant."}]
+        for line in context.splitlines():
+            if ": " in line:
+                role, content = line.split(": ", 1)
+                messages.append({"role": role.lower(), "content": content})
+        messages.append({"role": "user", "content": user_message})
+
+        # 4. Ask LLM
+        response = llm_chat(messages, provider=provider, model=model)
+
+        # 5. Save assistant reply
+        save_message(chat_id, user_id, "assistant", response)
+
+        return {
+            "status": "success",
+            "reply": response
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ------------------- MESSAGE ROUTES -------------------
+
+@router.post("/message")
+async def post_message(message: ChatMessage):
+    try:
+        result = insert_message(message)
+        return {"status": "success", "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/message/{chat_id}")
+async def get_chat_memory(chat_id: str):
+    try:
+        history = get_messages_by_chat(chat_id)
+        return {"status": "success", "messages": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ------------------- CONTEXT ROUTES -------------------
+
+@router.get("/context/{chat_id}")
+async def get_context(chat_id: str):
+    try:
+        context = build_context(chat_id)
+        return {"chat_id": chat_id, "context": context}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ------------- PATCH ----------------
+
+class ChatUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    media_type: Optional[str] = None
+
+@router.patch("/{chat_id}")
+async def update_chat(chat_id: str, update: ChatUpdate):
+    try:
+        logger.info(f"Updating chat {chat_id} with data: {update}")
+        update_data = {k: v for k, v in update.dict().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        res = supabase.table("chats").update(update_data).eq("id", chat_id).execute()
+
+        # Fix: Only check .error if it exists
+        if hasattr(res, "error") and res.error:
+            logger.error(f"Supabase update error: {res.error}")
+            raise HTTPException(status_code=500, detail=str(res.error))
+
+        logger.info(f"Chat {chat_id} updated successfully")
+        return {
+            "status": "success",
+            "message": "Chat updated successfully",
+            "data": res.data[0] if res.data and len(res.data) > 0 else None
+        }
+    except Exception as e:
+        logger.error(f"Error updating chat: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ------------- DELETE ----------------
+
+@router.delete("/{chat_id}")
+def delete_chat(chat_id: str):
+    try:
+        res = supabase.from_("chats").delete().eq("id", chat_id).execute()
+
+        if res.error:
+            raise HTTPException(status_code=500, detail=str(res.error))
+
+        return {
+            "status": "success",
+            "message": f"Chat {chat_id} deleted."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Place all fixed-string routes above parameterized routes
+
 @router.get("/user/{user_id}")
 def list_chats(user_id: str):
     try:
-        res = supabase.from_("chats").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-        if res.error:
-            raise HTTPException(status_code=500, detail=str(res.error))
-        return {"status": "success", "chats": res.data}
+        logger.info(f"Fetching chats for user_id: {user_id}")
+        try:
+            res = supabase.table("chats").select("*").eq("user_id", user_id).order(column="created_at", desc=True).execute()
+            logger.info(f"Raw Supabase response from select: {res}")
+            if hasattr(res, 'error') and res.error:
+                logger.error(f"Supabase select error: {res.error}")
+                raise HTTPException(status_code=500, detail=f"Failed to fetch chats: {res.error}")
+            logger.info(f"Found {len(res.data)} chats for user {user_id}")
+            return {
+                "status": "success", 
+                "chats": res.data
+            }
+        except Exception as e:
+            logger.error(f"Exception during Supabase select: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error listing chats: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
+
+# All parameterized routes (/{chat_id}) must go last to avoid route conflicts
+
+@router.get("/{chat_id}")
+def get_chat(chat_id: str):
+    try:
+        query = supabase.table("chats").select("*").eq("id", chat_id)
+        query = query.is_("user_id", None)
+        res = query.single().execute()
+        if hasattr(res, 'error') and res.error:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

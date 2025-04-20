@@ -26,6 +26,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "VoxStitch API is running!"}
+
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
@@ -66,7 +70,7 @@ def get_chats(request: Request):
         return []
 
     res = supabase.table("chats").select("*").eq("user_id", user.id).order("created_at", desc=True).execute()
-    if res.error:
+    if hasattr(res, 'error') and res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return res.data
 
@@ -82,7 +86,7 @@ def get_chat(chat_id: str, request: Request):
         query = query.is_("user_id", None)
     res = query.single().execute()
 
-    if res.error:
+    if hasattr(res, 'error') and res.error:
         raise HTTPException(status_code=404, detail="Chat not found")
     return res.data
 
@@ -92,11 +96,15 @@ def update_chat(chat_id: str, chat_update: ChatCreate, request: Request):
     user = get_current_user(request)
     chat = supabase.table("chats").select("id", "user_id").eq("id", chat_id).single().execute()
 
-    if chat.error or (user and chat.data["user_id"] != user.id):
+    # Fix: Only check .error if it exists, since some responses may not have it
+    if hasattr(chat, "error") and chat.error:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if user and (not hasattr(chat, "data") or chat.data["user_id"] != user.id):
         raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
 
     res = supabase.table("chats").update(chat_update.dict(exclude_unset=True)).eq("id", chat_id).execute()
-    if res.error:
+    # Fix: Only check .error if it exists
+    if hasattr(res, "error") and res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return res.data[0]
 
@@ -106,11 +114,15 @@ def delete_chat(chat_id: str, request: Request):
     user = get_current_user(request)
     chat = supabase.table("chats").select("id", "user_id").eq("id", chat_id).single().execute()
 
-    if chat.error or (user and chat.data["user_id"] != user.id):
+    # Fix: Only check .error if it exists
+    if hasattr(chat, "error") and chat.error:
+        raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
+    if user and (not hasattr(chat, "data") or chat.data["user_id"] != user.id):
         raise HTTPException(status_code=404, detail="Chat not found or unauthorized")
 
     res = supabase.table("chats").delete().eq("id", chat_id).execute()
-    if res.error:
+    # Fix: Only check .error if it exists
+    if hasattr(res, "error") and res.error:
         raise HTTPException(status_code=500, detail=str(res.error))
     return {"message": "Chat deleted"}
 
@@ -159,9 +171,17 @@ app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
 app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
 app.include_router(hybrid_router, prefix="/api")
 app.include_router(chat_routes.router)
+app.include_router(chat_router, prefix="/api/chats", tags=["chat-messages"])
 
 # Debug: Print all registered routes
-print("\n=== REGISTERED ROUTES ===")
-for route in app.routes:
-    print(f"{route.methods} {route.path}")
-print("=========================\n")
+
+@app.on_event("startup")
+async def print_routes():
+    print("\n=== REGISTERED ROUTES ===")
+    for route in app.routes:
+        print(f"{route.methods} {route.path}")
+    print("=========================\n")
+# print("\n=== REGISTERED ROUTES ===")
+# for route in app.routes:
+#     print(f"{route.methods} {route.path}")
+# print("=========================\n")

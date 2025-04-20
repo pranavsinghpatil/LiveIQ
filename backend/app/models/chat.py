@@ -41,3 +41,9 @@ class ChatThread(BaseModel):
     updated_at: Optional[datetime]
     summary: Optional[str] = None
     metadata: Optional[dict] = None
+
+class ChatMessage(BaseModel):
+    chat_id: str
+    role: str  # 'user' or 'assistant'
+    content: str
+    timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
