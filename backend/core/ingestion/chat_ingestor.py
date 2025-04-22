@@ -1,83 +1,106 @@
-"""
-Chat Ingestor Service
-Handles all incoming media (text, files, links) and extracts content.
-"""
-
-import os
-from typing import Dict, Any
-from app.utils.media_processor import media_processor
-import tempfile
-import logging
-import traceback
+from typing import Optional, Dict, Any
 from datetime import datetime
+import os, traceback, logging
+import fitz  # PyMuPDF
+from PIL import Image
+import pytesseract
+from youtube_transcript_api import YouTubeTranscriptApi
+from urllib.parse import urlparse, parse_qs
+from app.utils.html_chat_parser import parse_chatgpt_html, detect_html_chat_source
 
 logger = logging.getLogger(__name__)
 
-class ChatIngestor:
-    """
-    A unified service that ingests different media types for chat creation.
-    """
 
-    async def ingest(self, media_type: str, content: str = None, file_path: str = None, file_type: str = None) -> dict:
+def extract_youtube_id(url: str) -> Optional[str]:
+    parsed = urlparse(url)
+    if parsed.hostname and "youtube" in parsed.hostname:
+        return parse_qs(parsed.query).get("v", [None])[0]
+    elif parsed.hostname and "youtu.be" in parsed.hostname:
+        return parsed.path.strip("/")
+    return None
+
+def get_youtube_transcript(video_id: str) -> str:
+    try:
         try:
-            if media_type == "file":
-                logger.info(f"Ingesting file: {file_path} of type {file_type}")
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+        except:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["hi"])
+        return " ".join([x["text"] for x in transcript])
+    except Exception as e:
+        raise ValueError("Failed to fetch transcript: " + str(e))
 
-                if file_type and "image" in file_type:
-                    from PIL import Image
-                    import pytesseract
+class ChatIngestor:
+    async def ingest_text(self, content: str) -> Dict:
+        return {
+            "content": content,
+            "media_type": "text",
+            "created_at": datetime.utcnow().isoformat()
+        }
 
-                    img = Image.open(file_path)
-                    extracted_text = pytesseract.image_to_string(img)
-                    return {
-                        "content": extracted_text.strip(),
-                        "metadata": {"source": "OCR"},
-                        "created_at": datetime.utcnow().isoformat()
-                    }
+    async def ingest_pdf(self, file_path: str) -> Dict:
+        doc = fitz.open(file_path)
+        text = "\n".join([page.get_text() for page in doc])
+        return {
+            "content": text,
+            "media_type": "pdf",
+            "created_at": datetime.utcnow().isoformat()
+        }
 
-                elif file_type in ["application/pdf"]:
-                    import fitz  # PyMuPDF
-                    doc = fitz.open(file_path)
-                    text = "\n".join([page.get_text() for page in doc])
-                    return {
-                        "content": text.strip(),
-                        "metadata": {"source": "PDF"},
-                        "created_at": datetime.utcnow().isoformat()
-                    }
+    async def ingest_image(self, file_path: str) -> Dict:
+        img = Image.open(file_path)
+        text = pytesseract.image_to_string(img)
+        return {
+            "content": text,
+            "media_type": "image",
+            "created_at": datetime.utcnow().isoformat()
+        }
 
-                else:
-                    return {
-                        "content": None,
-                        "metadata": {"error": "Unsupported or binary file type"}
-                    }
+    async def ingest_youtube(self, url: str) -> Dict:
+        vid = extract_youtube_id(url)
+        if not vid:
+            raise ValueError("Invalid YouTube link")
+        text = get_youtube_transcript(vid)
+        return {
+            "content": text,
+            "media_type": "youtube",
+            "created_at": datetime.utcnow().isoformat()
+        }
 
-            elif media_type == "text":
-                return {
-                    "content": content,
-                    "metadata": {"source": "form"},
-                    "created_at": datetime.utcnow().isoformat()
-                }
-
-            else:
-                return {
-                    "content": None,
-                    "metadata": {"error": "Unsupported media_type"}
-                }
-
-        except Exception as e:
-            logger.error("Error in chat_ingestor.ingest(): %s", str(e))
-            traceback.print_exc()
+    async def ingest_html(self, file_path: str) -> Dict:
+        source = detect_html_chat_source(file_path)
+        if source == "chatgpt":
+            history = parse_chatgpt_html(file_path)
+            text = "\n\n".join([f"{m['role'].capitalize()}: {m['content']}" for m in history])
             return {
-                "content": None,
-                "metadata": {"error": str(e)}
+                "content": text.strip(),
+                "media_type": "chatgpt_html",
+                "metadata": {"source": "ChatGPT HTML"},
+                "created_at": datetime.utcnow().isoformat()
+            }
+        # Future: Add more parsers for other platforms (gemini, claude, grok, etc.)
+        else:
+            # fallback: just extract all text
+            with open(file_path, "r", encoding="utf-8") as f:
+                raw = f.read()
+            return {
+                "content": raw,
+                "media_type": f"{source}_html" if source != "unknown" else "html",
+                "metadata": {"source": source},
+                "created_at": datetime.utcnow().isoformat()
             }
 
+    async def ingest_file(self, file_path: str, ext: str) -> Dict[str, Any]:
+        ext = ext.lower()
+        if ext == "pdf":
+            return await self.ingest_pdf(file_path)
+        elif ext in ["png", "jpg", "jpeg"]:
+            return await self.ingest_image(file_path)
+        elif ext in ["html", "htm"]:
+            return await self.ingest_html(file_path)
+        elif ext in ["txt", "md", "json"]:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return await self.ingest_text(f.read())
+        else:
+            raise ValueError(f"Unsupported file type: {ext}")
 
-# Singleton export
 chat_ingestor = ChatIngestor()
-
-# Optional: CLI Debugging Utility
-if __name__ == "__main__":
-    import sys, asyncio
-    path = sys.argv[1]
-    print(asyncio.run(ChatIngestor().ingest("file", None, path, "image/jpeg")))

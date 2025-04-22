@@ -21,3 +21,7 @@ def clear_context(chat_id: str):
     """Clear memory for a chat"""
     chat_memory.pop(chat_id, None)
 
+# --------------------- FOR PODCAST -------------------------------
+def set_context(chat_id: str, messages: List[Dict[str, str]]):
+    """Explicitly set context for a given chat"""
+    chat_memory[chat_id] = messages

@@ -17,6 +17,9 @@ from .routes.chat_routes import router as chat_router
 from app.routes.hybrid_routes import router as hybrid_router
 from .routes import chat_routes
 from core.llm.llm_routes import router as llm_router
+from .routes.upload import router as upload_router
+from .routes.linker import router as link_router
+from core.ingestion.ingestion_router import router as ingestion_router
 
 # from core.podcast.route import router as podcast_router
 
@@ -174,6 +177,10 @@ app.include_router(chat_routes.router)
 app.include_router(chat_router, prefix="/api/chats", tags=["chat-messages"])
 
 app.include_router(llm_router)
+
+app.include_router(upload_router)
+app.include_router(link_router)
+app.include_router(ingestion_router)
 
 # Debug: Print all registered routes
 
