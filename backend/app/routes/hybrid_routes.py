@@ -6,7 +6,8 @@ from core.services.hybrid_service import create_hybrid_chat, get_hybrid_context
 from ..services.llm_reply_service import get_hybrid_reply
 from typing import Optional
 
-router = APIRouter(prefix="/api/hybrid", tags=["hybrid"])
+# Remove prefix here; let main.py handle the prefix
+router = APIRouter(tags=["hybrid"])
 
 class HybridCreateRequest(BaseModel):
     user_id: str

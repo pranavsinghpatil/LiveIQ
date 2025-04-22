@@ -35,3 +35,29 @@ Parses speakers
 Allows you to chat with each speaker individually
 
 Bonus: Join the podcast conversation yourself (multi-speaker chat)
+
+
+## hybrid and thread func.
+ 🔁 Hybrid = Chat Grouping System
+Hybrid = a combo of multiple chats (from different sources: files, links, screenshots, GPT, Claude, etc.)
+
+Users interact with the entire group of chats as one.
+
+Example: Combine all your AGI research convos into one hybrid group like AGI_Research_Hybrid.
+
+🧠 Thread = Runtime Query Engine
+Threads = runtime follow-up questions on any assistant response
+
+Like: You highlight a sentence "AGI can self-improve" and ask "What does this imply?"
+
+A temporary chat is spun up (backed by the same context), and the response is shown.
+
+It can be optionally saved for future reference.
+
+🔍 Summary: Clear Separation
+Feature	Hybrid	Thread
+Purpose	Combine related chats	Ask follow-up or clarification on a reply
+Scope	Group-level (cross-chat)	Message-level (within a chat or hybrid)
+Duration	Persistent	Temporary by default (can be saved)
+Example	5 GPT convos merged	Highlighted "prompt injection" → Ask why?
+Context	All chats in hybrid	Local chat + LLM context from message

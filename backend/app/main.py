@@ -172,15 +172,13 @@ def login_user(user: UserCreate):
 app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
 app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
-app.include_router(hybrid_router)
+app.include_router(hybrid_router, prefix="/api/hybrid", tags=["hybrid"])
+app.include_router(llm_router, prefix="/api/llm", tags=["llm"])
 app.include_router(chat_routes.router)
-app.include_router(chat_router, prefix="/api/chats", tags=["chat-messages"])
-
-app.include_router(llm_router)
-
 app.include_router(upload_router)
 app.include_router(link_router)
 app.include_router(ingestion_router)
+
 
 # Debug: Print all registered routes
 

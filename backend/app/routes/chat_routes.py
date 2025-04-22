@@ -10,7 +10,6 @@ from ..models.chat import Chat, ChatCreate, ChatThread, Message, ChatMessage
 from ..services.auth_service import get_current_user
 from ..models.user_models import User
 from ..utils.media_processor import media_processor
-from ..models.group import ThreadGroup
 from ..services.supabase_client import supabase
 from ..services.context_service import build_context
 from datetime import datetime
@@ -32,80 +31,6 @@ supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_
 # Create router with tags for better API documentation
 router = APIRouter(tags=["chats"])
 logger = logging.getLogger(__name__)
-
-# ------------------- GROUP ROUTES -------------------
-
-@router.post("/group/create", response_model=ThreadGroup)
-async def create_thread_group(group: ThreadGroup, current_user: User = Depends(get_current_user)):
-    """Create a new thread group"""
-    try:
-        # Initialize group data
-        group_data = group.dict()
-        group_data["created_at"] = datetime.utcnow().isoformat()
-        group_data["user_id"] = current_user.id
-        if not group_data.get("thread_ids"):
-            group_data["thread_ids"] = []
-
-        # Save to Supabase
-        res = supabase.table("thread_groups").insert(group_data).execute()
-        
-        if res.error:
-            logger.error(f"Error creating group: {str(res.error)}")
-            raise HTTPException(status_code=500, detail=str(res.error))
-            
-        return res.data[0]
-    except Exception as e:
-        logger.error(f"Error creating group: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/group/{group_id}", response_model=ThreadGroup)
-async def get_thread_group(group_id: str, current_user: User = Depends(get_current_user)):
-    """Get a thread group by ID"""
-    try:
-        res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
-        
-        if res.error:
-            logger.error(f"Error getting group: {str(res.error)}")
-            raise HTTPException(status_code=404, detail="Group not found")
-            
-        return res.data
-    except Exception as e:
-        logger.error(f"Error getting group: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.post("/group/{group_id}/add_thread")
-async def add_thread_to_group(
-    group_id: str, 
-    thread_id: str, 
-    current_user: User = Depends(get_current_user)
-):
-    """Add a chat thread to a group"""
-    try:
-        # Get the group
-        res = supabase.table("thread_groups").select("*").eq("id", group_id).single().execute()
-        if res.error:
-            raise HTTPException(status_code=404, detail="Group not found")
-
-        group = res.data
-        
-        # Verify ownership
-        if group.get("user_id") != current_user.id:
-            raise HTTPException(status_code=403, detail="Not authorized to modify this group")
-
-        # Add thread ID if not already present
-        if thread_id not in group["thread_ids"]:
-            group["thread_ids"].append(thread_id)
-            group["updated_at"] = datetime.utcnow().isoformat()
-            
-            # Update the group
-            update_res = supabase.table("thread_groups").update(group).eq("id", group_id).execute()
-            if update_res.error:
-                raise HTTPException(status_code=500, detail=str(update_res.error))
-
-        return {"status": "success", "message": "Thread added to group"}
-    except Exception as e:
-        logger.error(f"Error adding thread to group: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ------------------- CHAT ROUTES -------------------
 
