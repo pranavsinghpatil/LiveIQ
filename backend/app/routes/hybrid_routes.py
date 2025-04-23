@@ -20,6 +20,14 @@ class HybridReplyRequest(BaseModel):
     provider: Optional[str] = "google"  # Default LLM
     model: Optional[str] = None
 
+class Hybrid(BaseModel):
+    id: str
+    chat_ids: list[str]
+    title: str
+
+# In-memory hybrid db for demo (replace with DB in prod)
+hybrid_db = {}
+
 @router.post("/create")
 async def create_hybrid(request: HybridCreateRequest):
     try:
@@ -35,6 +43,11 @@ async def create_hybrid(request: HybridCreateRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/create/hybrid", response_model=Hybrid)
+def create_hybrid(hybrid: Hybrid):
+    hybrid_db[hybrid.id] = hybrid.dict()
+    return hybrid
+
 @router.get("/context/{hybrid_id}")
 async def get_context(hybrid_id: str):
     try:
@@ -45,6 +58,10 @@ async def get_context(hybrid_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+@router.get("/{hybrid_id}/chats")
+def get_chats_in_hybrid(hybrid_id: str):
+    return hybrid_db.get(hybrid_id, {}).get("chat_ids", [])
 
 @router.post("/reply")
 async def hybrid_chat_reply(request: HybridReplyRequest):

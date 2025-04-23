@@ -24,6 +24,8 @@ from dotenv import load_dotenv
 import magic
 from ..services.message_service import insert_message, get_messages_by_chat
 from uuid import UUID
+from core.db.memory import append_to_context
+
 
 load_dotenv()
 supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
@@ -355,3 +357,14 @@ def get_chat(chat_id: UUID):
         return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/chats/{chat_id}/message")
+def add_message(chat_id: str, payload: dict):
+    message = Message(
+        chat_id=chat_id,
+        role="user",
+        content=payload["content"],
+        timestamp=datetime.utcnow()
+    )
+    append_to_context(chat_id, message.dict())
+    return {"status": "Message added"}

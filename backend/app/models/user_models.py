@@ -37,6 +37,11 @@ class UserCreate(UserBase):
     """User model for registration"""
     password: str  # Supabase will hash this internally
 
+class UserRegistrationResponse(BaseModel):
+    status: str
+    message: str
+    data: User
+
 class UserInDB(User):
     """User model for database operations"""
     hashed_password: str

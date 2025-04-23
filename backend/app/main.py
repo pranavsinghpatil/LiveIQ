@@ -20,6 +20,8 @@ from core.llm.llm_routes import router as llm_router
 from .routes.upload import router as upload_router
 from .routes.linker import router as link_router
 from core.ingestion.ingestion_router import router as ingestion_router
+# admin auth
+from app.routes.admin_auth_routes import router as admin_auth_router
 
 # from core.podcast.route import router as podcast_router
 
@@ -169,7 +171,7 @@ def login_user(user: UserCreate):
         raise HTTPException(status_code=401, detail=str(e))
 
 # Include routers for additional functionality
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 app.include_router(chat_router, prefix="/api/chats", tags=["chats"])
 app.include_router(podcast_simulator.router, prefix="/api", tags=["podcast"])
 app.include_router(hybrid_router, prefix="/api/hybrid", tags=["hybrid"])
@@ -179,6 +181,8 @@ app.include_router(upload_router)
 app.include_router(link_router)
 app.include_router(ingestion_router)
 
+# admin auth
+app.include_router(admin_auth_router)
 
 # Debug: Print all registered routes
 
