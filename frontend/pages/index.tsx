@@ -18,9 +18,11 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await api.post("/auth/token", {
-        username: identifier, // Accepts username or email
-        password,
+      const params = new URLSearchParams();
+      params.append("username", identifier);
+      params.append("password", password);
+      const res = await api.post("/api/auth/token", params, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       localStorage.setItem("access_token", res.data.access_token);
       setToken(res.data.access_token);
@@ -51,6 +53,12 @@ export default function LoginPage() {
         Login
       </button>
       {error && <p className="text-red-600 mt-4">{error}</p>}
+      <button
+        className="mt-4 text-blue-700 underline hover:text-blue-900"
+        onClick={() => router.push("/register")}
+      >
+        New user? Register here
+      </button>
     </div>
   );
 }

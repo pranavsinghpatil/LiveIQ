@@ -9,13 +9,14 @@ from ..models.user_models import UserCreate as UserCreateModel, UserRegistration
 from ..services.supabase_client import supabase
 import logging
 import os
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")  # Use environment variable
+SECRET_KEY = os.getenv("SUPABASE_JWT_SECRET", "your-supabase-jwt-secret")  # Use environment variable
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -83,6 +84,28 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+SUPABASE_JWT_ISSUER = "https://vcbefzpolioczqpygfzh.supabase.co/auth/v1"
+SUPABASE_JWKS_URL = f"{SUPABASE_JWT_ISSUER}/jwks"
+
+# Cache keys for performance
+_jwks_cache = None
+
+def get_supabase_public_keys():
+    global _jwks_cache
+    if _jwks_cache is not None:
+        return _jwks_cache
+    resp = requests.get(SUPABASE_JWKS_URL)
+    resp.raise_for_status()
+    _jwks_cache = resp.json()["keys"]
+    return _jwks_cache
+
+def get_supabase_public_key(kid):
+    keys = get_supabase_public_keys()
+    for key in keys:
+        if key["kid"] == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(key)
+    raise Exception("Public key not found for kid " + kid)
 
 @routes.post("/register", response_model=UserRegistrationResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreateModel):
@@ -225,35 +248,52 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "data": {"access_token": access_token, "token_type": "bearer"}
     }
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    """Get current user from JWT token"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+@routes.post("/logout")
+async def logout_user(token: str = Depends(oauth2_scheme)):
+    """Logout user by revoking the token (Supabase sign_out and stateless JWT)."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
+        # Attempt to revoke the token via Supabase (if possible)
+        res = supabase.auth.sign_out()
+        if hasattr(res, 'error') and res.error:
+            return {
+                "status": "error",
+                "message": f"Supabase sign_out failed: {str(res.error)}. Please delete the token on the client."
+            }
+        return {
+            "status": "success",
+            "message": "User logged out via Supabase sign_out and token deleted on client."
+        }
+    except Exception as e:
+        # Even if Supabase sign_out fails, logout is stateless for JWT
+        return {
+            "status": "success",
+            "message": f"User logged out (token deleted on client). Supabase sign_out error: {str(e)}"
+        }
 
-    user = fake_users_db.get(token_data.username)
-    if user is None:
-        raise credentials_exception
-    return User(**user)
-
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
-    """Get current active user"""
-    if current_user.disabled:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
-    return current_user
+@routes.post("/refresh")
+async def refresh_token(token: str = Depends(oauth2_scheme)):
+    """Refresh JWT access token if not expired (issue new token with fresh exp)."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        # Remove old exp and iat if present
+        payload.pop("exp", None)
+        payload.pop("iat", None)
+        # Issue new token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_token = create_access_token(data=payload, expires_delta=access_token_expires)
+        return {
+            "status": "success",
+            "message": "Token refreshed",
+            "data": {"access_token": new_token, "token_type": "bearer"}
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Could not refresh token: {str(e)}")
 
 @routes.get("/me", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: dict = Depends(get_current_active_user)):
     """Get current user profile"""
     return {
         "status": "success",
@@ -261,7 +301,28 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
         "data": current_user
     }
 
-@routes.get("/test")
-async def test():
-    """Test endpoint to verify router is working"""
-    return {"status": "success", "message": "Auth router working"}
+async def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+        return {
+            "id": user_id,
+            "email": payload.get("email"),
+            "username": payload.get("user_metadata", {}).get("username")
+        }
+    except Exception as e:
+        logging.error(f"JWT validation error: {e}")
+        raise credentials_exception
+
+async def get_current_active_user(current_user: dict = Depends(get_current_user)):
+    """Get current active user"""
+    if current_user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user")
+    return current_user

@@ -19,17 +19,26 @@ export default function RegisterPage() {
 
   const handleRegister = async () => {
     try {
-      await api.post("/auth/register", { username, email, password });
+      await api.post("/api/auth/register", { username, email, password });
       // Auto-login after successful registration
-      const loginRes = await api.post("/auth/token", {
-        username: email || username, // Try email first, fallback to username
-        password,
+      const params = new URLSearchParams();
+      params.append("username", email || username);
+      params.append("password", password);
+      const loginRes = await api.post("/api/auth/token", params, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       localStorage.setItem("access_token", loginRes.data.access_token);
       setToken(loginRes.data.access_token);
       router.push("/dashboard");
     } catch (err) {
-      setError("Registration failed.");
+      // Try to show a more helpful error message from backend
+      if (err.response && err.response.data && err.response.data.detail) {
+        setError(err.response.data.detail);
+      } else if (err.response && err.response.data && err.response.data.msg) {
+        setError(err.response.data.msg);
+      } else {
+        setError("Registration failed.");
+      }
     }
   };
 
@@ -61,6 +70,12 @@ export default function RegisterPage() {
         Register
       </button>
       {error && <p className="text-red-600 mt-4">{error}</p>}
+      <button
+        className="mt-4 text-blue-700 underline hover:text-blue-900"
+        onClick={() => router.push("/")}
+      >
+        Back to Login
+      </button>
     </div>
   );
 }
