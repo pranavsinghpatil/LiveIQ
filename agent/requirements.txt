@@ -1,0 +1,11 @@
+python>=3.9
+numpy
+pandas
+scikit-learn
+matplotlib
+sentence-transformers
+pennylane
+pennylane-qiskit   # optional if using qiskit simulator backend
+torch
+tqdm
+pyyaml
