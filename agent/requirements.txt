@@ -9,3 +9,11 @@ pennylane-qiskit   # optional if using qiskit simulator backend
 torch
 tqdm
 pyyaml
+transformers
+sentence-transformers
+langchain-community
+chromadb
+pydantic
+pennylane
+datasets
+rich

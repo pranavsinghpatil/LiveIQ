@@ -12,3 +12,4 @@ trainer:
   svm:
     C: 1.0
 output_dir: "outputs/run1"
+llm_backend: "hf"   # options: "hf", "openai", "groq"
