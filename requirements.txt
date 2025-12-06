@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+typer
+genanki
+pydantic
+google-generativeai
+openai
+anthropic
+ollama
+python-dotenv
