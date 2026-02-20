@@ -1,0 +1,93 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Stream {
+  PCM
+  PCB
+}
+
+enum Subject {
+  PHYSICS
+  CHEMISTRY
+  MATHS
+  BIOLOGY
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  phone           String    @unique
+  name            String
+  role            UserRole  @default(STUDENT)
+  stream          Stream?
+  parentPhone     String?
+  deviceId        String?   @unique
+  
+  // Analytics
+  currentStreak   Int       @default(0)
+  bestStreak      Int       @default(0)
+  lastAttemptDate DateTime?
+  
+  // Relationships
+  attempts        Attempt[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([phone])
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  subject       Subject
+  stream        Stream
+  questionText  String   @db.Text
+  options       String[] // Array of 4 options
+  correctOption String   // The correct answer string or index
+  marks         Int      @default(1)
+  targetDate    DateTime // The day this question should appear
+  
+  createdAt     DateTime @default(now())
+
+  @@index([targetDate, stream])
+}
+
+model Attempt {
+  id            String   @id @default(cuid())
+  studentId     String
+  user          User     @relation(fields: [studentId], references: [id])
+  
+  targetDate    DateTime
+  answers       Json     // Stores { questionId: selectedOption }
+  
+  totalScore    Int
+  accuracy      Float
+  timeTaken     Int      // Seconds
+  
+  completedAt   DateTime @default(now())
+
+  @@unique([studentId, targetDate]) // Prevents multiple attempts per day
+  @@index([targetDate])
+}
+
+model DeviceChangeRequest {
+  id          String   @id @default(cuid())
+  studentId   String
+  oldDeviceId String
+  newDeviceId String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reason      String?
+  createdAt   DateTime @default(now())
+}
