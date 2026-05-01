@@ -1,7 +1,0 @@
-Photosynthesis is the process used by plants, algae and certain bacteria to harness energy from sunlight and turn it into chemical energy.
-The process is summarized by the equation:
-6CO2 + 6H2O + light energy -> C6H12O6 + 6O2
-
-There are two main stages:
-1. Light-dependent reactions: Capture energy from sunlight. Occur in thylakoid membranes. Produce ATP and NADPH.
-2. Calvin cycle (Light-independent): Use ATP and NADPH to fix carbon dioxide into glucose. Occur in the stroma.
