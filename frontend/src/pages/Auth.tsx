@@ -41,18 +41,18 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="auth-page" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.18), var(--bg-base))' }}>
+    <div className="auth-page">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--gradient-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, boxShadow: '0 8px 32px rgba(99,102,241,0.4)' }}>
-            <Tv size={26} color="white" />
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <Tv size={26} color="var(--bg-base)" />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>LiveIQ</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>Real-time Sports Intelligence Platform</p>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>LiveIQ</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Intelligence Platform</p>
         </div>
 
-        <div className="glass auth-card">
+        <div className="card auth-card">
           <div className="auth-tabs">
             <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => setTab('login')}>Sign In</button>
             <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => setTab('register')}>Create Account</button>
@@ -89,8 +89,8 @@ export default function AuthPage() {
             </button>
           </form>
 
-          <div style={{ marginTop: 20, padding: '14px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--accent-primary)' }}>Demo credentials:</strong><br />
+          <div style={{ marginTop: 24, padding: '14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
+            <strong style={{ color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Demo credentials</strong><br /><br />
             Analyst: analyst@demo.com / demo123<br />
             Viewer: viewer@demo.com / demo123
           </div>

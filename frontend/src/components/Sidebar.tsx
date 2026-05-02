@@ -27,10 +27,10 @@ export function Sidebar() {
         >
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'var(--gradient-primary)',
+            background: 'var(--text-primary)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Tv size={18} color="white" />
+            <Tv size={18} color="var(--bg-base)" />
           </div>
           <div>
             <div className="logo-text">LiveIQ</div>
@@ -50,26 +50,28 @@ export function Sidebar() {
         ))}
       </div>
 
-      <div style={{ padding: '16px 20px', borderTop: '1px solid var(--glass-border)', marginTop: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+      <div style={{ padding: '20px 16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '0 4px' }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '50%',
-            background: 'var(--gradient-primary)',
+            width: 28, height: 28, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 13, fontWeight: 700, color: 'white',
+            fontSize: 12, fontWeight: 600, color: 'var(--text-primary)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            flexShrink: 0,
           }}>
             {user?.email?.[0]?.toUpperCase()}
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ overflow: 'hidden', flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
               {user?.email}
             </div>
-            <span className={`badge badge-${user?.role}`} style={{ fontSize: 9 }}>{user?.role}</span>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>{user?.role}</div>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" style={{ width: '100%' }}
+        <button className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', fontSize: 12, color: 'var(--text-muted)', padding: '8px 4px' }}
           onClick={() => { logout(); navigate('/auth'); }}>
-          <LogOut size={14} /> Sign out
+          <LogOut size={13} /> Sign out
         </button>
       </div>
     </nav>

@@ -20,18 +20,18 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
     # Startup
-    print("🚀 Starting Live Event Intelligence Platform...")
+    print("[INIT] Starting Live Event Intelligence Platform...")
     await init_db()
-    print("✅ Database initialized")
+    print("[INIT] Database initialized")
     await get_redis()
-    print("✅ Redis connected")
+    print("[INIT] Redis connected")
     start_scheduler()
-    print("✅ Scheduler started")
+    print("[INIT] Scheduler started")
     yield
     # Shutdown
     stop_scheduler()
     await close_redis()
-    print("👋 Shutdown complete")
+    print("[INIT] Shutdown complete")
 
 
 app = FastAPI(
@@ -61,17 +61,23 @@ app = FastAPI(
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from app.routers import auth, events, alerts, admin, internal
+from app.routers.websocket import router as ws_router
+
+# ... inside main ...
 
 # Include routers
 app.include_router(auth.router)
 app.include_router(events.router)
 app.include_router(alerts.router)
 app.include_router(admin.router)
+app.include_router(internal.router)
 app.include_router(ws_router)
 
 

@@ -26,10 +26,32 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   return token ? children : <Navigate to="/auth" replace />;
 }
 
+import { Sun, Moon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  return (
+    <div 
+      className="theme-toggle" 
+      onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+      title="Toggle Theme"
+    >
+      {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ToastContainer />
+      <ThemeToggle />
       <Routes>
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/" element={<Navigate to="/events" replace />} />

@@ -33,49 +33,61 @@ export default function PostEventReport() {
   }
 
   if (!isAnalyst()) return (
-    <div className="page"><div className="glass card" style={{ padding: 40, textAlign: 'center' }}>
-      <FileText size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-      <p>Post-event reports require <span style={{ color: 'var(--accent-primary)' }}>Analyst</span> role.</p>
-    </div></div>
+    <div className="page">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass card" style={{ padding: '80px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, border: '1px solid var(--border)' }}>
+          <FileText size={24} color="var(--text-muted)" />
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Access Denied</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Post-event reports require <strong style={{ color: 'var(--accent-cyan)' }}>Analyst</strong> role.</p>
+      </motion.div>
+    </div>
   );
 
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">📋 Post-Event Reports</h1>
-        <p className="page-subtitle">Full Gemini narrative, key moments, prediction accuracy review</p>
+        <h1 className="page-title">Post-Event Reports</h1>
+        <p className="page-subtitle">Full narrative, key moments, prediction accuracy review</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16 }}>
-        <div className="glass card" style={{ maxHeight: 680, overflowY: 'auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24 }}>
+        <div className="card" style={{ maxHeight: 680, overflowY: 'auto' }}>
           <div className="section-label">Finished Events</div>
           {events.map((e, i) => (
             <motion.div
               key={e.id} onClick={() => loadReport(e.id)}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}
               style={{
-                padding: 12, borderRadius: 8, cursor: 'pointer', marginBottom: 8,
-                background: selected === e.id ? 'rgba(99,102,241,0.15)' : 'var(--glass-bg)',
-                border: `1px solid ${selected === e.id ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)'}`,
+                padding: 16, borderRadius: 8, cursor: 'pointer', marginBottom: 8,
+                background: selected === e.id ? 'var(--bg-hover)' : 'var(--bg-base)',
+                border: `1px solid ${selected === e.id ? 'var(--text-primary)' : 'var(--border)'}`,
               }}
             >
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{e.home_team} vs {e.away_team}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
-                {e.home_score} — {e.away_score} · {e.sport}
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{e.home_team} vs {e.away_team}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>
+                {e.home_score} — {e.away_score} <span style={{ fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: '0.05em', marginLeft: 6 }}>· {e.sport}</span>
               </div>
             </motion.div>
           ))}
         </div>
 
         <div>
-          {loading && <div className="glass card" style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>Loading report...</div>}
+          {loading && (
+            <div className="glass card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0' }}>
+              <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 2 }} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <FileText size={32} color="var(--accent-cyan)" style={{ filter: 'drop-shadow(0 0 10px rgba(0,240,255,0.5))' }} />
+                <span style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent-cyan)', fontWeight: 800 }}>Generating Report...</span>
+              </motion.div>
+            </div>
+          )}
           {report && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div className="glass card">
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-                  <div>
-                    <div className="section-label">Prediction Accuracy</div>
-                    <div style={{ fontSize: 48, fontWeight: 900, color: (report.prediction_accuracy || 0) >= 0.7 ? 'var(--accent-green)' : 'var(--accent-yellow)' }}>
+              <div className="card">
+                <div style={{ display: 'flex', gap: 24, alignItems: 'center', marginBottom: 16 }}>
+                  <div style={{ paddingRight: 24, borderRight: '1px solid var(--border)' }}>
+                    <div className="section-label">Accuracy</div>
+                    <div style={{ fontSize: 48, fontFamily: 'JetBrains Mono', fontWeight: 700, color: (report.prediction_accuracy || 0) >= 0.7 ? 'var(--text-primary)' : 'var(--text-secondary)', letterSpacing: '-2px' }}>
                       {((report.prediction_accuracy || 0) * 100).toFixed(0)}%
                     </div>
                   </div>
@@ -87,25 +99,27 @@ export default function PostEventReport() {
               </div>
 
               {report.key_moments?.length > 0 && (
-                <div className="glass card">
-                  <div className="section-label">⚡ Top 5 Key Moments</div>
+                <div className="card">
+                  <div className="section-label">Top 5 Key Moments</div>
                   {report.key_moments.map((m: string, i: number) => (
-                    <div key={i} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: '1px solid var(--glass-border)' }}>
-                      <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--gradient-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
-                      <span style={{ fontSize: 14, lineHeight: 1.5 }}>{m}</span>
+                    <div key={i} style={{ display: 'flex', gap: 16, padding: '16px 0', borderBottom: '1px solid var(--border)' }}>
+                      <span style={{ width: 28, height: 28, borderRadius: '4px', background: 'var(--bg-base)', border: '1px solid var(--border)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, fontFamily: 'JetBrains Mono', color: 'var(--text-secondary)', flexShrink: 0 }}>0{i + 1}</span>
+                      <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text-primary)' }}>{m}</span>
                     </div>
                   ))}
                 </div>
               )}
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', gap: 6, alignItems: 'center' }}>
-                <Clock size={12} /> Generated: {new Date(report.generated_at).toLocaleString()}
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 6, alignItems: 'center', fontFamily: 'JetBrains Mono', marginTop: 8 }}>
+                <Clock size={11} /> GENERATED: {new Date(report.generated_at).toLocaleString()}
               </div>
             </div>
           )}
           {!loading && !report && (
-            <div className="glass card" style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
-              <FileText size={32} style={{ opacity: 0.3, marginBottom: 12 }} /><br />
-              Select a finished event to view its report
+            <div className="glass card empty-state" style={{ padding: '80px 40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, border: '1px solid var(--border)' }}>
+                <FileText size={24} color="var(--text-muted)" />
+              </div>
+              <p style={{ color: 'var(--text-secondary)' }}>Select a finished event to view its full analytical narrative.</p>
             </div>
           )}
         </div>

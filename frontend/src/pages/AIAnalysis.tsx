@@ -45,7 +45,7 @@ export default function AIAnalysis() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">🧠 AI Analysis Panel</h1>
+        <h1 className="page-title">AI Analysis Panel</h1>
         <p className="page-subtitle">Gemini Flash deep analysis — trend direction, predictions, key moments</p>
       </div>
 
@@ -83,7 +83,7 @@ export default function AIAnalysis() {
               <div className="glass card">
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
                   <TrendIndicator trend={selected.trend} />
-                  {selected.weather_conditions && <span style={{ fontSize: 12, color: 'var(--accent-cyan)' }}>🌤️ {selected.weather_conditions}</span>}
+                  {selected.weather_conditions && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{selected.weather_conditions}</span>}
                 </div>
                 <p style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: 20 }}>{selected.updated_summary}</p>
                 <ConfidenceBar value={selected.confidence} />
@@ -91,12 +91,12 @@ export default function AIAnalysis() {
 
               <div className="grid-2">
                 <div className="glass card">
-                  <div className="section-label">🔮 Gemini Prediction</div>
+                  <div className="section-label">Gemini Prediction</div>
                   <p style={{ fontSize: 14, lineHeight: 1.6 }}>{selected.prediction}</p>
                 </div>
                 {selected.groq_prediction && (
-                  <div className="glass card" style={{ borderColor: 'rgba(6,182,212,0.2)' }}>
-                    <div className="section-label" style={{ color: 'var(--accent-cyan)' }}>⚡ Groq Prediction</div>
+                  <div className="glass card">
+                    <div className="section-label">Groq Prediction</div>
                     <p style={{ fontSize: 14, lineHeight: 1.6 }}>{selected.groq_prediction}</p>
                     {selected.groq_confidence && <div style={{ marginTop: 12 }}><ConfidenceBar value={selected.groq_confidence} /></div>}
                   </div>
@@ -105,7 +105,7 @@ export default function AIAnalysis() {
 
               {selected.key_moments && selected.key_moments.length > 0 && (
                 <div className="glass card">
-                  <div className="section-label">⚡ Key Moments</div>
+                  <div className="section-label">Key Moments</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {selected.key_moments.map((m, i) => (
                       <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 14px', background: 'var(--glass-bg)', borderRadius: 8 }}>

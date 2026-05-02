@@ -5,6 +5,10 @@ echo ======================================================
 echo 📺 LiveIQ — Platform Launcher (Production Grade)
 echo ======================================================
 
+:: 0. Clean up previous instances
+echo [0/5] Terminating previous instances...
+taskkill /FI "WINDOWTITLE eq LiveIQ - *" /T /F >nul 2>&1
+
 :: 1. Environment Checks
 echo [1/5] Checking environment...
 
@@ -27,7 +31,7 @@ if not exist "backend\venv" (
     cd backend
     python -m venv venv
     call venv\Scripts\activate
-    echo [!] Installing backend dependencies (this may take a minute)...
+    echo [!] Installing backend dependencies - this may take a minute...
     pip install -r requirements.txt >nul
     cd ..
     echo [OK] Backend environment ready.

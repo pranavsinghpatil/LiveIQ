@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, CloudSun } from 'lucide-react';
 import api from '../lib/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import type { WSMessage } from '../hooks/useWebSocket';
@@ -27,21 +27,20 @@ export default function LiveEventView() {
   const handleWsMessage = useCallback((msg: WSMessage) => {
     if (msg.type === 'commentary') {
       const c = msg.data as any;
-      setCommentaries(prev => [{ id: Date.now().toString(), text: c.text, model: c.model, latency_ms: c.latency_ms, created_at: msg.timestamp }, ...prev.slice(0, 49)]);
+      const newId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setCommentaries(prev => [{ id: newId, text: c.text, model: c.model, latency_ms: c.latency_ms, created_at: msg.timestamp }, ...prev.slice(0, 49)]);
     } else if (msg.type === 'analysis') {
       setAnalysis(msg.data as Analysis);
     } else if (msg.type === 'stage_update') {
       loadStages();
     } else if (msg.type === 'alert') {
-      toast.info(`🔔 Alert: ${(msg.data as any).message}`);
+      toast.info((msg.data as any).message);
     }
   }, []);
 
   const { connected } = useWebSocket(eventId, { onMessage: handleWsMessage });
 
   useEffect(() => { if (eventId) { loadEvent(); loadStages(); loadCommentaries(); loadAnalysis(); } }, [eventId]);
-
-  // Poll stages every 10s as fallback
   useEffect(() => {
     if (!eventId) return;
     const iv = setInterval(loadStages, 10000);
@@ -53,106 +52,181 @@ export default function LiveEventView() {
     catch { toast.error('Event not found'); }
     finally { setLoading(false); }
   }
-  async function loadStages() {
-    try { const r = await api.get(`/api/events/${eventId}/stages`); setStages(r.data); } catch {}
-  }
-  async function loadCommentaries() {
-    try { const r = await api.get(`/api/events/${eventId}/commentary`); setCommentaries(r.data); } catch {}
-  }
-  async function loadAnalysis() {
-    try { const r = await api.get(`/api/events/${eventId}/analyses?limit=1`); if (r.data[0]) setAnalysis(r.data[0]); } catch {}
-  }
+  async function loadStages() { try { const r = await api.get(`/api/events/${eventId}/stages`); setStages(r.data); } catch {} }
+  async function loadCommentaries() { try { const r = await api.get(`/api/events/${eventId}/commentary`); setCommentaries(r.data); } catch {} }
+  async function loadAnalysis() { try { const r = await api.get(`/api/events/${eventId}/analyses?limit=1`); if (r.data[0]) setAnalysis(r.data[0]); } catch {} }
 
-  if (!eventId) return <div className="page"><div className="glass card" style={{ padding: 40, textAlign: 'center' }}>Select an event from the Event Browser to view live data.</div></div>;
-  if (loading) return <div className="page" style={{ textAlign: 'center', padding: '80px' }}>Loading event...</div>;
+  // ── Empty / Loading states ──────────────────────────────
+  if (!eventId) return (
+    <div className="page">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="card"
+        style={{ padding: '80px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <WifiOff size={28} color="var(--text-muted)" style={{ marginBottom: 16, opacity: 0.4 }} />
+        <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>No Event Selected</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Open the Event Browser and select a match to watch.</p>
+      </motion.div>
+    </div>
+  );
+
+  if (loading) return (
+    <div className="page" style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <motion.div animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 2 }}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <RefreshCw size={24} color="var(--text-muted)" />
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>Loading event...</span>
+      </motion.div>
+    </div>
+  );
+
+  const isLive = event?.status === 'In Progress';
 
   return (
-    <div className="page">
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-              <span className={`badge badge-${event?.status === 'In Progress' ? 'live' : 'done'}`}>
-                {event?.status === 'In Progress' && <span className="live-dot" style={{ width: 6, height: 6 }} />}
-                {event?.status}
-              </span>
-              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>🏆 {event?.league || event?.sport}</span>
-            </div>
-            <h1 className="page-title">{event?.home_team} <span style={{ color: 'var(--text-muted)' }}>vs</span> {event?.away_team}</h1>
-            {event?.venue && <p className="page-subtitle">📍 {event.venue}</p>}
+    <div className="page" style={{ paddingBottom: 60 }}>
+
+      {/* ── Event Header ───────────────────────── */}
+      <div style={{ marginBottom: 28 }}>
+        {/* Top meta row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isLive && <span className="live-dot" />}
+            <span style={{ fontSize: 11, fontWeight: 600, color: isLive ? 'var(--accent-green)' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {event?.status}
+            </span>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div className="score-display">{event?.home_score || '0'} — {event?.away_score || '0'}</div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
-              {connected ? <span style={{ color: 'var(--accent-green)', fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}><Wifi size={12} />Live</span>
-                         : <span style={{ color: 'var(--accent-red)', fontSize: 12, display: 'flex', gap: 4, alignItems: 'center' }}><WifiOff size={12} />Reconnecting...</span>}
-            </div>
+          {(event?.league || event?.sport) && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {event?.league || event?.sport}
+              </span>
+            </>
+          )}
+          {event?.venue && (
+            <>
+              <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: 12 }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{event.venue}</span>
+            </>
+          )}
+          {/* Connection pill — pushed right */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {connected
+              ? <><Wifi size={11} color="var(--accent-green)" /><span style={{ fontSize: 11, color: 'var(--accent-green)', fontWeight: 500 }}>Live</span></>
+              : <><WifiOff size={11} color="var(--text-muted)" /><span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Offline</span></>
+            }
           </div>
         </div>
+
+        {/* Teams + Score */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+            {event?.home_team}
+            <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: 20, margin: '0 12px' }}>vs</span>
+            {event?.away_team}
+          </h1>
+          <div style={{ fontSize: 32, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)', letterSpacing: '-0.5px', flexShrink: 0 }}>
+            {event?.home_score ?? '0'} — {event?.away_score ?? '0'}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginTop: 20 }} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 340px', gap: 16 }}>
-        {/* Commentary Feed */}
-        <div className="glass card">
-          <div className="section-label">⚡ Live Commentary (Groq Llama)</div>
+      {/* ── Main Grid ──────────────────────────── */}
+      <div className="live-grid">
+
+        {/* Column 1: Commentary */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 480 }}>
           <CommentaryFeed items={commentaries} />
         </div>
 
-        {/* AI Analysis */}
-        <div className="glass card">
-          <div className="section-label">🧠 AI Analysis (Gemini)</div>
-          {analysis ? (
-            <div>
-              {analysis.weather_conditions && (
-                <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(6,182,212,0.1)', borderRadius: 8, fontSize: 13, color: 'var(--accent-cyan)' }}>
-                  🌤️ {analysis.weather_conditions}
-                </div>
-              )}
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', marginBottom: 16 }}>{analysis.updated_summary}</p>
-              <div style={{ marginBottom: 16 }}>
+        {/* Column 2: AI Analysis */}
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+              AI Analysis
+            </p>
+
+            {/* Weather */}
+            {analysis?.weather_conditions && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                <CloudSun size={12} color="var(--text-muted)" />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{analysis.weather_conditions}</span>
+              </div>
+            )}
+
+            {/* Summary */}
+            {analysis ? (
+              <p style={{ fontSize: 13, lineHeight: 1.65, color: 'var(--text-secondary)', margin: 0 }}>
+                {analysis.updated_summary}
+              </p>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Awaiting analysis...</p>
+            )}
+          </div>
+
+          {analysis && (
+            <>
+              {/* Trend + Confidence */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <TrendIndicator trend={analysis.trend} />
+                <ConfidenceBar value={analysis.confidence} />
               </div>
-              <ConfidenceBar value={analysis.confidence} />
-              <div style={{ marginTop: 16, padding: 12, background: 'rgba(99,102,241,0.08)', borderRadius: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 6 }}>PREDICTION</div>
-                <p style={{ fontSize: 13 }}>{analysis.prediction}</p>
-              </div>
-              {analysis.key_moments && analysis.key_moments.length > 0 && (
-                <div style={{ marginTop: 14 }}>
-                  <div className="section-label">Key Moments</div>
-                  {analysis.key_moments.map((m, i) => (
-                    <div key={i} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)' }}>
-                      {i + 1}. {m}
-                    </div>
-                  ))}
+
+              {/* Gemini Prediction */}
+              {analysis.prediction && (
+                <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Gemini Prediction</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>{analysis.prediction}</p>
                 </div>
               )}
-              {/* Multi-model debate bonus */}
+
+              {/* Groq Prediction */}
               {analysis.groq_prediction && (
-                <div style={{ marginTop: 14, padding: 12, background: 'rgba(6,182,212,0.08)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: 6 }}>⚡ GROQ PREDICTION</div>
-                  <p style={{ fontSize: 13 }}>{analysis.groq_prediction}</p>
-                  {analysis.groq_confidence && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Confidence: {(analysis.groq_confidence * 100).toFixed(0)}%</div>}
+                <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Groq Prediction</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.55 }}>{analysis.groq_prediction}</p>
+                  {analysis.groq_confidence && (
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '6px 0 0', fontFamily: 'JetBrains Mono, monospace' }}>
+                      Confidence: {(analysis.groq_confidence * 100).toFixed(0)}%
+                    </p>
+                  )}
                 </div>
               )}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '32px 0', fontSize: 14 }}>
-              <RefreshCw size={24} style={{ marginBottom: 8, opacity: 0.4 }} /><br />
-              AI analysis runs every 5 minutes. Waiting for first analysis...
-            </div>
+
+              {/* Key Moments */}
+              {analysis.key_moments && analysis.key_moments.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Key Moments</p>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {analysis.key_moments.map((m, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.04)', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-muted)', paddingTop: 1, flexShrink: 0 }}>
+                          {String(i + 1).padStart(2, '0')}
+                        </span>
+                        <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>{m}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* Pipeline Stepper */}
-        <div className="glass card">
+        {/* Column 3: Pipeline */}
+        <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div className="section-label" style={{ marginBottom: 0 }}>Pipeline Status</div>
-            <button className="btn btn-ghost btn-sm" onClick={loadStages}><RefreshCw size={12} /></button>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+              Pipeline
+            </p>
+            <button className="btn btn-ghost" style={{ padding: '4px 6px', fontSize: 11, color: 'var(--text-muted)' }} onClick={loadStages}>
+              <RefreshCw size={12} />
+            </button>
           </div>
           <PipelineStepper stages={stages} />
         </div>
+
       </div>
     </div>
   );

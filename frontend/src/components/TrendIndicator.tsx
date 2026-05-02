@@ -5,13 +5,19 @@ type Trend = 'momentum' | 'stable' | 'reversal';
 export function TrendIndicator({ trend }: { trend?: Trend }) {
   if (!trend) return null;
   const config = {
-    momentum: { icon: <TrendingUp size={14} />, label: 'Momentum', cls: 'trend-momentum' },
-    stable:   { icon: <Minus size={14} />,       label: 'Stable',   cls: 'trend-stable'   },
-    reversal: { icon: <TrendingDown size={14} />, label: 'Reversal', cls: 'trend-reversal' },
+    momentum: { icon: <TrendingUp size={14} />, label: 'Momentum', color: 'var(--accent-cyan)' },
+    stable:   { icon: <Minus size={14} />,       label: 'Stable',   color: 'var(--text-secondary)' },
+    reversal: { icon: <TrendingDown size={14} />, label: 'Reversal', color: 'var(--accent-primary)' },
   };
-  const { icon, label, cls } = config[trend];
+  const { icon, label, color } = config[trend];
   return (
-    <span className={`trend-badge ${cls}`}>
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, 
+      textTransform: 'uppercase', letterSpacing: '0.05em',
+      border: `1px solid rgba(255, 255, 255, 0.1)`, color: color,
+      background: `color-mix(in srgb, ${color} 10%, transparent)`
+    }}>
       {icon} {label}
     </span>
   );
@@ -19,15 +25,19 @@ export function TrendIndicator({ trend }: { trend?: Trend }) {
 
 export function ConfidenceBar({ value }: { value?: number }) {
   const pct = ((value ?? 0) * 100).toFixed(0);
-  const color = (value ?? 0) >= 0.7 ? 'var(--accent-green)' : (value ?? 0) >= 0.4 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+  const color = (value ?? 0) >= 0.7 ? 'var(--accent-cyan)' : (value ?? 0) >= 0.4 ? '#f59e0b' : 'var(--accent-red)';
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6 }}>
-        <span style={{ color: 'var(--text-secondary)' }}>Confidence</span>
-        <span style={{ fontWeight: 700, color }}>{pct}%</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <span style={{ color: 'var(--text-muted)' }}>Confidence</span>
+        <span style={{ fontWeight: 800, color, fontFamily: 'JetBrains Mono' }}>{pct}%</span>
       </div>
-      <div className="confidence-bar">
-        <div className="confidence-fill" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}aa)` }} />
+      <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ 
+          width: `${pct}%`, height: '100%', 
+          background: color, 
+          transition: 'width 0.8s ease' 
+        }} />
       </div>
     </div>
   );

@@ -10,11 +10,35 @@ SPORTSDB_BASE = "https://www.thesportsdb.com/api/v1/json"
 MOCK_FILE_PATH = "mock_livescore.json"
 
 
+import random
+
+_mock_data_state = None
+
 def _load_mock_data() -> List[dict]:
+    global _mock_data_state
     try:
-        with open(MOCK_FILE_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data.get("events", [])
+        if _mock_data_state is None:
+            with open(MOCK_FILE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                _mock_data_state = data.get("events", [])
+        
+        # Simulate dynamic changes for the demo
+        for event in _mock_data_state:
+            status = event.get("status", "")
+            if status in ("Live", "1H", "2H", "In Progress", "Q1", "Q2", "Q3", "Q4", "Set 1", "Set 2", "Set 3"):
+                # 15% chance to score on each poll
+                if random.random() < 0.15:
+                    if random.random() < 0.5:
+                        current = int(event.get("home_score", 0) or 0)
+                        event["home_score"] = str(current + 1)
+                    else:
+                        current = int(event.get("away_score", 0) or 0)
+                        event["away_score"] = str(current + 1)
+                
+                # Ensure the event stream has unique timestamps
+                event["simulated_clock"] = datetime.utcnow().isoformat()
+        
+        return _mock_data_state
     except FileNotFoundError:
         return []
 

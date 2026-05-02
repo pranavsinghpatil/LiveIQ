@@ -17,16 +17,7 @@ interface FallbackStage {
   completed_at?: string;
 }
 
-const STAGE_ICONS: Record<string, string> = {
-  'Event Ingestion': '📥',
-  'Stream Accumulation': '📊',
-  'Groq Commentary': '⚡',
-  'Gemini Analysis': '🧠',
-  'Redis Pub/Sub Publish': '📡',
-  'WebSocket Push': '🔌',
-  'Alert Rule Evaluation': '🔔',
-  'Post-Event Report': '📋',
-};
+
 
 function StepIcon({ status, number }: { status: Stage['status']; number: number }) {
   if (status === 'done') return <CheckCircle size={18} />;
@@ -68,7 +59,7 @@ export function PipelineStepper({ stages }: { stages: Stage[] }) {
           </div>
           <div className="step-content">
             <div className="step-name">
-              {STAGE_ICONS[stage.stage_name] || '⚙️'} {stage.stage_name}
+              {stage.stage_name}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 3 }}>
               <span className={`badge badge-${stage.status === 'done' ? 'done' : stage.status === 'active' ? 'live' : stage.status === 'failed' ? 'failed' : 'pending'}`} style={{ fontSize: 10 }}>

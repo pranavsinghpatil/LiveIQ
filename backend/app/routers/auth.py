@@ -41,6 +41,20 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
     result = await db.execute(select(User).where(User.email == form.username))
     user = result.scalar_one_or_none()
 
+    # Auto-provision demo users if they don't exist
+    if not user and form.username in ("analyst@demo.com", "viewer@demo.com") and form.password == "demo123":
+        role = UserRole.analyst if "analyst" in form.username else UserRole.viewer
+        user = User(
+            id=str(uuid.uuid4()),
+            email=form.username,
+            password_hash=hash_password("demo123"),
+            role=role,
+            notification_prefs={}
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

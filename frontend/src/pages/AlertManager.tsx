@@ -6,9 +6,9 @@ import { useAuthStore } from '../lib/auth';
 import { toast } from '../components/Toast';
 
 const RULE_TYPES = [
-  { value: 'keyword_detected', label: '🔤 Keyword Detected', desc: 'Alert when a keyword appears in commentary' },
-  { value: 'score_threshold', label: '🎯 Score Threshold', desc: 'Alert when score gap exceeds a value' },
-  { value: 'trend_change', label: '📈 Trend Change', desc: 'Alert when AI detects a trend shift' },
+  { value: 'keyword_detected', label: 'KEYWORD DETECTED', desc: 'Alert when a keyword appears in commentary' },
+  { value: 'score_threshold', label: 'SCORE THRESHOLD', desc: 'Alert when score gap exceeds a value' },
+  { value: 'trend_change', label: 'TREND CHANGE', desc: 'Alert when AI detects a trend shift' },
 ];
 
 interface AlertRule { id: string; event_id: string; rule_type: string; rule_value: any; is_active: boolean; created_at: string; }
@@ -54,10 +54,15 @@ export default function AlertManager() {
   }
 
   if (!isAnalyst()) return (
-    <div className="page"><div className="glass card" style={{ padding: 40, textAlign: 'center' }}>
-      <Bell size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-      <p>Alert Manager is available for <span style={{ color: 'var(--accent-primary)' }}>Analyst</span> role only.</p>
-    </div></div>
+    <div className="page">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass card" style={{ padding: '80px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(255,255,255,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24, border: '1px solid var(--border)' }}>
+          <BellOff size={24} color="var(--text-muted)" />
+        </div>
+        <h2 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Access Denied</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Alert Manager is available for <strong style={{ color: 'var(--accent-cyan)' }}>Analyst</strong> role only.</p>
+      </motion.div>
+    </div>
   );
 
   return (
@@ -65,7 +70,7 @@ export default function AlertManager() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="page-title">🔔 Alert Manager</h1>
+            <h1 className="page-title">Alert Manager</h1>
             <p className="page-subtitle">Define custom alert rules — keyword, score threshold, trend changes</p>
           </div>
           <button id="create-rule-btn" className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
@@ -76,9 +81,9 @@ export default function AlertManager() {
 
       {/* Create rule form */}
       {showForm && (
-        <motion.div className="glass card" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 20 }}>
+        <motion.div className="card" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 24 }}>
           <div className="section-label">Create Alert Rule</div>
-          <div className="grid-2" style={{ gap: 16 }}>
+          <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Event</label>
               <select id="rule-event" className="input" value={form.event_id} onChange={e => setForm(f => ({ ...f, event_id: e.target.value }))}>
@@ -125,59 +130,61 @@ export default function AlertManager() {
               </select>
             </div>
           )}
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             <button id="save-rule-btn" className="btn btn-primary" onClick={createRule}>Save Rule</button>
             <button className="btn btn-ghost" onClick={() => setShowForm(false)}>Cancel</button>
           </div>
         </motion.div>
       )}
 
-      <div className="grid-2">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
         {/* Active rules */}
         <div>
           <div className="section-label">Active Rules ({rules.length}/5 max)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {rules.map((rule, i) => (
-              <motion.div key={rule.id} className="glass card" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+              <motion.div key={rule.id} className="card" initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {RULE_TYPES.find(r => r.value === rule.rule_type)?.label}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono', background: 'var(--bg-base)', padding: '4px 8px', borderRadius: 4, display: 'inline-block' }}>
                       {JSON.stringify(rule.rule_value)}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Event: {rule.event_id.slice(0, 8)}...</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>EVENT: {rule.event_id.slice(0, 8)}...</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button className="btn btn-ghost btn-sm" onClick={() => toggleRule(rule.id)} title={rule.is_active ? 'Disable' : 'Enable'}>
+                    <button className="btn btn-ghost" style={{ padding: '6px' }} onClick={() => toggleRule(rule.id)} title={rule.is_active ? 'Disable' : 'Enable'}>
                       {rule.is_active ? <ToggleRight size={15} color="var(--accent-green)" /> : <ToggleLeft size={15} />}
                     </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => deleteRule(rule.id)}><Trash2 size={13} /></button>
+                    <button className="btn btn-ghost" style={{ padding: '6px' }} onClick={() => deleteRule(rule.id)}><Trash2 size={15} /></button>
                   </div>
                 </div>
-                <div style={{ marginTop: 8 }}>
-                  <span className={`badge ${rule.is_active ? 'badge-live' : 'badge-pending'}`}>{rule.is_active ? 'Active' : 'Disabled'}</span>
+                <div style={{ marginTop: 12 }}>
+                  <span className={`badge ${rule.is_active ? 'badge-live' : 'badge-done'}`}>{rule.is_active ? 'Active' : 'Disabled'}</span>
                 </div>
               </motion.div>
             ))}
-            {rules.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '16px 0' }}>No rules yet. Create your first alert rule above.</div>}
+            {rules.length === 0 && <div className="empty-state">No rules yet. Create your first alert rule above.</div>}
           </div>
         </div>
 
         {/* Alert history */}
         <div>
           <div className="section-label">Alert History</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {alerts.map((alert, i) => (
-              <motion.div key={alert.id} className="glass card" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                style={{ borderColor: 'rgba(239,68,68,0.2)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <motion.div key={alert.id} className="card" initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                style={{ borderLeft: '3px solid var(--accent-red)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>🔔 {alert.matched_rule?.rule_type?.replace(/_/g, ' ')}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{JSON.stringify(alert.matched_rule?.matched_data || {})}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Bell size={13} color="var(--accent-red)" /> {alert.matched_rule?.rule_type?.replace(/_/g, ' ')}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>{JSON.stringify(alert.matched_rule?.matched_data || {})}</div>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(alert.triggered_at).toLocaleTimeString()}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>{new Date(alert.triggered_at).toLocaleTimeString()}</div>
                 </div>
               </motion.div>
             ))}

@@ -40,6 +40,69 @@ Latest data: {json.dumps(event_data, default=str)[:500]}
 
 Commentary (one line only):"""
 
+    if settings.groq_api_key == "your_groq_api_key_here":
+        import random
+        home = event_data.get('home_team', 'Home')
+        away = event_data.get('away_team', 'Away')
+        home_score = event_data.get('home_score', '0')
+        away_score = event_data.get('away_score', '0')
+
+        templates = [
+            # Attacking plays
+            f"{home} driving forward with purpose — the pressure is building.",
+            f"Brilliant combination play from {home}, finding space in the final third.",
+            f"{away} pushing high up the pitch, looking to press intensely.",
+            f"A dangerous cross whipped in — nobody could get on the end of it.",
+            f"The referee waves play on as {home} appeal for a foul on the edge of the box.",
+            f"Quick free-kick caught {away}'s defense completely flat-footed.",
+            f"Inch-perfect through ball finds the striker — but the offside flag is up.",
+            f"Corner for {home}. The set piece routine looks practiced and deliberate.",
+            f"{away} goalkeeper commanded the box well, punching clear under pressure.",
+            f"The winger cuts inside and fires — deflected wide for a corner.",
+
+            # Tactical
+            f"{home} switching to a high press in midfield, suffocating {away}'s buildup.",
+            f"The midfield battle is intense — neither side giving an inch.",
+            f"{away} dropping deep, sitting in a compact block of four at the back.",
+            f"Possession shifts quickly — {home} recycling patiently, looking for an opening.",
+            f"That substitution could change the shape of this match completely.",
+            f"{home} exploiting the wide areas effectively, stretching {away}'s defensive line.",
+            f"A tactical foul breaks up what could have been a devastating counter-attack.",
+
+            # Score-aware
+            f"At {home_score}–{away_score}, {home} will be frustrated they can't find the breakthrough.",
+            f"Leading {home_score}–{away_score}, {away} sitting deep and protecting their advantage.",
+            f"This is nervous territory — a single goal could completely swing the tie.",
+            f"With the score at {home_score}–{away_score}, both managers watching the clock carefully.",
+
+            # Defensive moments
+            f"Outstanding recovery tackle from {away}'s center-back — crucial interception.",
+            f"Last-ditch block on the line — {away} somehow keeping this level.",
+            f"{home}'s backline dealing with everything thrown at them, so composed.",
+            f"Counter-attack alert! {away} springing forward with pace and numbers.",
+
+            # Individual moments
+            f"The captain stepping up to lead by example — driving his team forward.",
+            f"A loose touch in midfield invites pressure — {home} pounce immediately.",
+            f"Individual brilliance from the No.10 — beating two defenders before the shot.",
+            f"An absolute thunderbolt from range! The goalkeeper had no chance.",
+            f"Great save! Pushed it onto the post — the woodwork keeping {away} out.",
+            f"He goes down clutching his hamstring — could be a serious concern here.",
+            f"The youngster is having a tremendous impact since coming on as substitute.",
+
+            # Atmosphere / general
+            f"The tempo has lifted considerably in the last five minutes.",
+            f"Both managers animated on the touchline, sensing the game is at a tipping point.",
+            f"Long ball over the top — chased down superbly, showing real determination.",
+            f"Good penalty shout waved away — the away side absolutely furious.",
+            f"Stoppage time to be announced — both benches on their feet.",
+            f"The play is end-to-end now, this is enthralling stuff.",
+            f"A moment of quality in the chaos — threading the needle between three defenders.",
+        ]
+
+        text = random.choice(templates)
+        return text, 50
+
     try:
         response = await groq_client.chat.completions.create(
             model="llama-3.1-8b-instant",
@@ -109,6 +172,16 @@ async def generate_gemini_analysis(
         weather_context=weather_context,
         event_stream=json.dumps(event_stream[:50], default=str)[:8000],
     )
+
+    if settings.gemini_api_key == "your_gemini_api_key_here":
+        import random
+        return GeminiAnalysisOutput(
+            updated_summary=f"Mock Analysis: The game between {event_data.get('home_team')} and {event_data.get('away_team')} is heating up. Tactical adjustments are visible.",
+            key_moments=["Strong start", "Midfield control established", "Momentum shift", "Defense tightening", "Final push imminent"],
+            trend=random.choice([TrendEnum.momentum, TrendEnum.stable, TrendEnum.reversal]),
+            prediction=f"Prediction: {event_data.get('home_team')} will likely maintain pressure.",
+            confidence=0.85
+        ), 120
 
     for attempt in range(2):
         try:
@@ -232,6 +305,9 @@ Recent updates: {json.dumps(event_stream[-10:], default=str)[:2000]}
 
 Respond in JSON only:
 {{"prediction": "your prediction here", "confidence": 0.75, "reasoning": "brief reasoning"}}"""
+
+    if settings.groq_api_key == "your_groq_api_key_here":
+        return f"Mock Groq Prediction: {event_data.get('away_team')} looks strong on the counter.", 0.70, 60
 
     try:
         response = await groq_client.chat.completions.create(

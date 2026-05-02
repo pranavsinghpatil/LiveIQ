@@ -41,23 +41,23 @@ export default function PredictionBoard() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">🔮 Prediction Board</h1>
+        <h1 className="page-title">Prediction Board</h1>
         <p className="page-subtitle">AI predictions across all subscribed events with confidence tracking</p>
       </div>
 
       {/* Model Accuracy (Bonus) */}
       {modelAccuracy.length > 0 && (
-        <div className="glass card" style={{ marginBottom: 24 }}>
-          <div className="section-label">🏆 Model Accuracy — Multi-Model Debate</div>
+        <div className="card" style={{ marginBottom: 24 }}>
+          <div className="section-label">Model Accuracy — Multi-Model Debate</div>
           <div className="grid-2">
             {modelAccuracy.map((m) => (
-              <div key={m.model} style={{ padding: '16px', background: 'var(--glass-bg)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
-                  {m.model.includes('gemini') ? '🧠' : '⚡'} {m.model}
+              <div key={m.model} style={{ padding: '20px', background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+                  {m.model}
                 </div>
-                <div className="score-display" style={{ fontSize: 36 }}>{(m.accuracy_rate * 100).toFixed(0)}%</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                  {m.accurate_predictions} / {m.total_predictions} predictions
+                <div className="score-display" style={{ fontSize: 32, fontFamily: 'JetBrains Mono', color: 'var(--text-primary)', letterSpacing: '-1px' }}>{(m.accuracy_rate * 100).toFixed(0)}%</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {m.accurate_predictions} / {m.total_predictions} HIGH-CONFIDENCE
                 </div>
               </div>
             ))}
@@ -66,36 +66,36 @@ export default function PredictionBoard() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>Loading predictions...</div>
+        <div className="empty-state">Loading predictions...</div>
       ) : predictions.length === 0 ? (
-        <div className="glass card" style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>
+        <div className="empty-state card">
           Subscribe to events to see AI predictions here
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {predictions.map((p, i) => (
-            <motion.div key={p.id} className="glass card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <motion.div key={p.id} className="card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 24, alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>
-                    {p.event?.home_team} vs {p.event?.away_team}
+                    {p.event?.home_team} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>vs</span> {p.event?.away_team}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.event?.league} • {p.event?.sport}</div>
-                  <div style={{ marginTop: 8 }}><TrendIndicator trend={p.trend} /></div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.event?.league} • {p.event?.sport}</div>
+                  <div style={{ marginTop: 12 }}><TrendIndicator trend={p.trend} /></div>
                 </div>
-                <div style={{ textAlign: 'center', padding: '0 16px', borderLeft: '1px solid var(--glass-border)', borderRight: '1px solid var(--glass-border)' }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'JetBrains Mono' }}>
+                <div style={{ textAlign: 'center', padding: '0 24px', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'JetBrains Mono', letterSpacing: '-1px' }}>
                     {p.event?.home_score || '0'} — {p.event?.away_score || '0'}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{p.event?.status}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{p.event?.status}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-primary)', marginBottom: 6 }}>🧠 GEMINI</div>
-                  <p style={{ fontSize: 13, marginBottom: 10 }}>{p.prediction}</p>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>PRIMARY PREDICTION (GEMINI)</div>
+                  <p style={{ fontSize: 13, marginBottom: 12 }}>{p.prediction}</p>
                   <ConfidenceBar value={p.confidence} />
                   {p.groq_prediction && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: 4 }}>⚡ GROQ</div>
+                    <div style={{ marginTop: 16, padding: 12, background: 'rgba(6,182,212,0.05)', borderRadius: 4, borderLeft: '2px solid var(--accent-cyan)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>SECONDARY PREDICTION (GROQ)</div>
                       <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{p.groq_prediction}</p>
                     </div>
                   )}
