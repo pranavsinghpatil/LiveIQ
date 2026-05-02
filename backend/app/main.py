@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.database import init_db
 from app.services.redis_service import get_redis, close_redis
 from app.services.scheduler import start_scheduler, stop_scheduler
-from app.routers import auth, events, alerts, admin
+from app.routers import auth, events, alerts, admin, internal
 from app.routers.websocket import router as ws_router
 
 settings = get_settings()
@@ -40,13 +40,13 @@ app = FastAPI(
     Production-grade real-time sports event intelligence platform.
     
     ## Features
-    - 🏟️ **Live Sports Events** — TheSportsDB API + mock data
-    - 🤖 **AI Commentary** — Groq Llama 3.1 8B (< 2s)
-    - 🧠 **AI Analysis** — Gemini 1.5 Flash (every 5 min)
-    - 📡 **Real-time Push** — WebSocket + Redis pub/sub
-    - ⚡ **Pipeline Tracking** — 8-stage pipeline stepper
-    - 🔔 **Smart Alerts** — Custom rule engine
-    - 📊 **Post-event Reports** — Full Gemini narrative
+    - Live Sports Events — TheSportsDB API + mock data
+    - AI Commentary — Groq Llama 3.1 8B (< 2s)
+    - AI Analysis — Gemini 1.5 Flash (every 5 min)
+    - Real-time Push — WebSocket + Redis pub/sub
+    - Pipeline Tracking — 8-stage pipeline stepper
+    - Smart Alerts — Custom rule engine
+    - Post-event Reports — Full Gemini narrative
     
     ## Auth
     - JWT Bearer token required for most endpoints
@@ -66,11 +66,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from app.routers import auth, events, alerts, admin, internal
-from app.routers.websocket import router as ws_router
-
-# ... inside main ...
 
 # Include routers
 app.include_router(auth.router)

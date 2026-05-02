@@ -9,9 +9,9 @@ export const ingestionWorker = new Worker(
   'event-ingestion',
   async (job) => {
     console.log(`[IngestionWorker] Processing job ${job.id}`, job.data);
-    const { event_id } = job.data;
+    const { event_id, raw_data } = job.data;
     try {
-      await axios.post(`${BACKEND_URL}/internal/ingest`, { event_id });
+      await axios.post(`${BACKEND_URL}/internal/ingest`, { event_id, raw_data });
     } catch (e: any) {
       console.error(`[IngestionWorker] Failed: ${e.message}`);
       throw e;
@@ -31,7 +31,13 @@ export const accumulationWorker = new Worker(
   'stream-accumulation',
   async (job) => {
     console.log(`[AccumulationWorker] Processing job ${job.id}`);
-    const { event_id } = job.data;
+    const { event_id, normalized } = job.data;
+    try {
+      await axios.post(`${BACKEND_URL}/internal/accumulate/${event_id}`, { normalized });
+    } catch (e: any) {
+      console.error(`[AccumulationWorker] Failed: ${e.message}`);
+      throw e;
+    }
     return { event_id, accumulated: true };
   },
   {
@@ -45,9 +51,9 @@ export const commentaryWorker = new Worker(
   'groq-commentary',
   async (job) => {
     console.log(`[CommentaryWorker] Job ${job.id} for event ${job.data.event_id}`);
-    const { event_id } = job.data;
+    const { event_id, normalized } = job.data;
     try {
-      await axios.post(`${BACKEND_URL}/internal/commentary/${event_id}`);
+      await axios.post(`${BACKEND_URL}/internal/commentary/${event_id}`, { normalized });
     } catch (e: any) {
       console.error(`[CommentaryWorker] Failed: ${e.message}`);
       throw e;
