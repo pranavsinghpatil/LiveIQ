@@ -5,7 +5,7 @@ dotenv.config();
 import { setupBullBoard } from './bullboard';
 import workers from './workers';
 import { allQueues } from './queues';
-import { ingestionQueue, commentaryQueue, analysisQueue, reportQueue } from './queues';
+import { ingestionQueue, accumulationQueue, commentaryQueue, analysisQueue, alertQueue, reportQueue } from './queues';
 
 const app = express();
 app.use(express.json());
@@ -26,6 +26,12 @@ app.post('/internal/jobs/:jobType', async (req, res) => {
           backoff: { type: 'exponential', delay: 1000 },
         });
         break;
+      case 'accumulate':
+        await accumulationQueue.add('stream-accumulation', payload, {
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 500 },
+        });
+        break;
       case 'commentary':
         await commentaryQueue.add('groq-commentary', payload, {
           attempts: 2,
@@ -36,6 +42,12 @@ app.post('/internal/jobs/:jobType', async (req, res) => {
         await analysisQueue.add('gemini-analysis', payload, {
           attempts: 2,
           backoff: { type: 'fixed', delay: 2000 },
+        });
+        break;
+      case 'alerts':
+        await alertQueue.add('alert-rules', payload, {
+          attempts: 2,
+          backoff: { type: 'fixed', delay: 1000 },
         });
         break;
       case 'report':
