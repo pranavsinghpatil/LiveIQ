@@ -136,30 +136,30 @@ npm run dev
 
 Every requirement from the assignment has been meticulously implemented.
 
-### 1. 8-Stage Pipeline (100% Complete)
+### 1. 8-Stage Pipeline 
 - **Database Driven:** The `pipeline_stages` table is the single source of truth.
 - **Worker Execution:** Statuses update from `pending` → `active` → `done` exclusively from within the Node.js sidecar workers.
 - **Live UI:** The React frontend polls and receives WS events to animate the stepper in real-time.
 
-### 2. Multi-Model AI Engine (100% Complete)
+### 2. Multi-Model AI Engine 
 - **Groq (Llama 3.1 8B):** Used for Stage 3. Extremely fast (<2s) play-by-play commentary. Real-time generation verified with live keys.
 - **Gemini (2.0 Flash):** Used for Stage 4 & 8. Advanced reasoning for tactical analysis, trend evaluation, and post-match reports. System hardened to support Gemini 2.0's high-speed inference.
 
-### 3. Asynchronous Workers (BullMQ) (100% Complete)
+### 3. Asynchronous Workers (BullMQ) 
 - 6 distinct worker types (`ingestion`, `accumulation`, `commentary`, `analysis`, `alerts`, `reports`).
 - Features exponential backoff, retry logic, and concurrency limits.
 - Monitored via the integrated **Bull Board UI**.
 
-### 4. Real-time Engine (100% Complete)
+### 4. Real-time Engine 
 - **FastAPI WebSockets:** Handles client connections.
 - **Redis Pub/Sub:** Bridges the queue workers and the FastAPI instances.
 - **State Catchup:** If a client disconnects, the server immediately sends the last 10 cached updates upon reconnection.
 
-### 5. Smart Alerts & RBAC (100% Complete)
+### 5. Smart Alerts & RBAC 
 - **Role-Based Access Control:** `analyst` (full access) vs `viewer` (read-only, max 3 subscriptions). Enforced via FastAPI dependencies.
 - **Alert Engine:** Analysts can create rules for `keyword_detected`, `score_threshold`, or `trend_change`.
 
-### 6. Pipeline Hardening (Submission Finalization)
+### 6. Pipeline Hardening 
 - **Zero-Drop Integrity:** Fixed synchronization defects between Python and Node.js workers to ensure 100% pipeline completion (all 8 stages turning green).
 - **Auto-Provisioning:** Integrated demo-user auto-provisioning for `analyst@demo.com` to simplify reviewer evaluation.
 - **Live Verification:** Validated end-to-end data flow with real-world API keys, confirming that the system is no longer operating in a "mock-only" state.
