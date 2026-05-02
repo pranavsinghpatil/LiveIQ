@@ -30,6 +30,25 @@
 
 This project was built to fulfill **Assignment 5** with a **100% Free Stack** (No credit card required).
 
+## 📍 Table of Contents
+- [📖 Overview](#-overview)
+- [🏗️ Architecture](#️-architecture)
+- [🚀 Quick Start](#-quick-start)
+  - [Automated Launch](#option-1-automated-launch-windows-only)
+  - [Manual Execution](#option-2-manual-step-by-step-all-os)
+  - [Access Points](#-access-points)
+- [✅ Features & Rubric Checklist](#-features--rubric-checklist)
+  - [8-Stage Pipeline](#1-8-stage-pipeline-100-complete)
+  - [Multi-Model AI Engine](#2-multi-model-ai-engine-100-complete)
+  - [Asynchronous Workers](#3-asynchronous-workers-bullmq-100-complete)
+  - [Real-time Engine](#4-real-time-engine-100-complete)
+  - [Smart Alerts & RBAC](#5-smart-alerts--rbac-100-complete)
+  - [Pipeline Hardening](#6-pipeline-hardening-submission-finalization)
+- [🎁 Bonus Implementations](#-bonus-implementations-20-points)
+  - [Multi-Model Debate Mode](#-bonus-1-multi-model-debate-mode)
+  - [Live Weather Injection](#-bonus-2-live-weather-injection)
+- [🐳 Production Deployment](#-full-docker-production-deployment)
+
 ---
 
 ## 🏗️ Architecture
